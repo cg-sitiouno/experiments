@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header__avatar" id="avatar">--</div>
+        <h1 class="header__nombre">Tu Nombre</h1>
+        <p class="header__titulo">Desarrolladora web en formación</p>
+        <button class="btn-tema" id="btn-tema" aria-label="Cambiar tema">Cambiar tema</button>
+    </header>
+
+    <main class="main">
+        <section class="seccion" id="sobre-mi">
+            <h2 class="seccion__titulo">Sobre mí</h2>
+            <div class="sobre-mi__contenido"></div>
+        </section>
+
+        <section class="seccion" id="skills">
+            <h2 class="seccion__titulo">Skills</h2>
+            <div class="skills__lista" id="skills-lista"></div>
+        </section>
+
+        <section class="seccion" id="proyectos">
+            <h2 class="seccion__titulo">Proyectos destacados</h2>
+            <div class="proyectos__grid" id="proyectos-grid"></div>
+        </section>
+
+        <section class="seccion" id="contacto">
+            <h2 class="seccion__titulo">Contacto</h2>
+            <form class="form-contacto" id="form-contacto">
+                <div class="form-group">
+                    <label for="nombre">Nombre</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="mensaje">Mensaje</label>
+                    <textarea id="mensaje" name="mensaje" rows="4" required></textarea>
+                </div>
+                <button type="submit" class="btn-enviar">Enviar</button>
+            </form>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Perfil estudiante · 2026</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

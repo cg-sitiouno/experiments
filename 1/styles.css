@@ -1,0 +1,378 @@
+/* ============================================
+   CSS AVANZADO — GUÍA PEDAGÓGICA
+   ============================================
+
+   TEMAS CUBIERTOS:
+   1. Variables CSS (Custom Properties)
+   2. Selectores de atributos
+   3. Flexbox y Grid
+   4. Media queries y responsive
+   5. Transiciones
+   6. Pseudoclases (:hover, :focus)
+   7. Box model y box-sizing
+   8. Specificidad
+
+   ============================================ */
+
+/* --------------------------------------------
+   1. VARIABLES CSS (Custom Properties)
+   --------------------------------------------
+   Las variables CSS permiten almacenar valores que se reutilizan en todo el archivo.
+   Se definen con --nombre y se usan con var(--nombre).
+   Beneficio: cambiar el tema completo cambiando solo los valores en :root.
+*/
+:root {
+    /* Colores del tema claro */
+    --color-fondo: #ffffff;
+    --color-texto: #1a1a1a;
+    --color-secundario: #666666;
+    --color-acento: #6366f1;
+    --color-acento-hover: #4f46e5;
+    --color-borde: #e5e7eb;
+    --color-card: #f9fafb;
+
+    /* Inputs tienen fondo y borde separados para funcionar bien en ambos temas */
+    --color-input-bg: #ffffff;
+    --color-input-border: #d1d5db;
+
+    /* Espaciado base (los múltiplos de 8px son estándar en diseño) */
+    --espaciado: 16px;
+
+    /* Sombras para dar profundidad */
+    --sombra: 0 1px 3px rgba(0,0,0,0.1);
+    --sombra-hover: 0 4px 6px rgba(0,0,0,0.1);
+
+    /* Border radius unificado */
+    --radio: 8px;
+
+    /* Contenedor máximo para mantener legible el contenido */
+    --max-width: 800px;
+}
+
+/* Selector de atributo: aplica estilos cuando body tiene data-tema="dark"
+   Así podemos tener múltiples temas sin duplicar código */
+[data-tema="dark"] {
+    --color-fondo: #1a1a1a;
+    --color-texto: #f3f4f6;
+    --color-secundario: #9ca3af;
+    --color-acento: #818cf8;
+    --color-acento-hover: #6366f1;
+    --color-borde: #374151;
+    --color-card: #262626;
+    --color-input-bg: #262626;
+    --color-input-border: #4b5563;
+}
+
+/* --------------------------------------------
+   2. RESET BÁSICO
+   --------------------------------------------
+   Diferentes navegadores aplican márgenes y paddings por defecto.
+   El reset elimina estas inconsistencias para tener control total.
+*/
+* {
+    margin: 0;
+    padding: 0;
+}
+
+/* box-sizing: border-box significa que padding y border se incluyen
+   en el width/height total. Sin esto, un div de 100px con padding de 10px
+   mediría 120px de ancho, complicando los cálculos de layout. */
+* {
+    box-sizing: border-box;
+}
+
+/* --------------------------------------------
+   3. ESTILOS BASE DEL BODY
+   --------------------------------------------
+   font-family: system-ui usa la fuente del sistema operativo (más rápida que descargar fuentes).
+   -apple-system es para Safari en iOS/Mac.
+*/
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    line-height: 1.6;
+    padding: var(--espaciado);
+}
+
+/* --------------------------------------------
+   4. LAYOUT DEL HEADER
+   --------------------------------------------
+   Centrar el contenido es común: margin: 0 auto con width o max-width.
+   margin: 0 auto (vertical) (horizontal)
+*/
+.header {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 0;
+}
+
+/* Avatar circular usando border-radius: 50%
+   Flexbox para centrar el contenido (la inicial) dentro del círculo.
+   display: flex activa flexbox en el contenedor.
+   align-items: center centra verticalmente.
+   justify-content: center centra horizontalmente.
+*/
+.header__avatar {
+    width: 100px;
+    height: 100px;
+    background-color: var(--color-acento);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 auto 16px;
+}
+
+/* BEM naming: Bloque__Elemento--Modificador
+   Esto evita conflictos de especificidad y hace el código predecible. */
+.header__nombre {
+    font-size: 1.75rem;
+    margin-bottom: 8px;
+}
+
+.header__titulo {
+    color: var(--color-secundario);
+    margin-bottom: 24px;
+}
+
+/* --------------------------------------------
+   5. BOTÓN CAMBIAR TEMA
+   --------------------------------------------
+   transition: declara qué propiedad cambia y cuánto tarda.
+   Aquí: border-color cambia en 0.2 segundos con ease por defecto.
+*/
+.btn-tema {
+    background: none;
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto);
+    padding: 8px 16px;
+    border-radius: var(--radio);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+/* Pseudoclase :hover: se activa cuando el usuario pasa el mouse */
+.btn-tema:hover {
+    border-color: var(--color-acento);
+}
+
+/* --------------------------------------------
+   6. MAIN Y SECCIONES
+   --------------------------------------------
+   El main envuelve el contenido principal. Cada sección tiene un borde superior
+   para separarlas visualmente (excepto la primera, visible por herencia del padre).
+*/
+.main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+}
+
+.seccion {
+    padding: 24px 0;
+    border-top: 1px solid var(--color-borde);
+}
+
+.seccion__titulo {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+}
+
+/* --------------------------------------------
+   7. SKILLS — CHIP STYLE
+   --------------------------------------------
+   display: flex con flex-wrap: wrap permite que los chips salten a nueva línea
+   cuando no caben en el ancho disponible.
+   gap: 8px define espacio uniforme entre chips (row y column).
+*/
+.skills__lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-chip {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-borde);
+    color: var(--color-texto);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+}
+
+/* --------------------------------------------
+   8. PROYECTOS — GRID DE TARJETAS
+   --------------------------------------------
+   CSS Grid con gap para espaciado automático entre items.
+   En mobile: una columna (default).
+   En tablet/desktop: se overridhea con grid-template-columns.
+*/
+.proyectos__grid {
+    display: grid;
+    gap: 16px;
+}
+
+.tarjeta {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio);
+    padding: 20px;
+    /* Transición suave al hacer hover */
+    transition: box-shadow 0.2s;
+}
+
+/* Elevación al pasar mouse sobre la tarjeta */
+.tarjeta:hover {
+    box-shadow: var(--sombra-hover);
+}
+
+.tarjeta__titulo {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.tarjeta__descripcion {
+    color: var(--color-secundario);
+    font-size: 0.875rem;
+    margin-bottom: 12px;
+}
+
+/* Links sin subrayado por defecto, con hoverunderline */
+.tarjeta__link {
+    color: var(--color-acento);
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.tarjeta__link:hover {
+    text-decoration: underline;
+}
+
+/* --------------------------------------------
+   9. FORMULARIO DE CONTACTO
+   --------------------------------------------
+   Inputs de ancho completo (width: 100%).
+   focus: outline: none + border-color para feedback visual sin outline default.
+*/
+.form-contacto {
+    max-width: 400px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    margin-bottom: 6px;
+}
+
+/* Inputs y textareas comparten estilos (separador para múltiples selectores) */
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--radio);
+    background-color: var(--color-input-bg);
+    color: var(--color-texto);
+    font-size: 1rem;
+}
+
+/* :focus se activa al hacer click o tab a un input */
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-acento);
+}
+
+/* Botón con color de acento que cambia al hover */
+.btn-enviar {
+    background-color: var(--color-acento);
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--radio);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.btn-enviar:hover {
+    background-color: var(--color-acento-hover);
+}
+
+/* --------------------------------------------
+   10. FOOTER
+   -------------------------------------------- */
+.footer {
+    max-width: var(--max-width);
+    margin: 40px auto 0;
+    text-align: center;
+    color: var(--color-secundario);
+    font-size: 0.875rem;
+}
+
+/* --------------------------------------------
+   11. MEDIA QUERIES — RESPONSIVE
+   --------------------------------------------
+   Mobile first: los estilos base son para móvil.
+   Solo se añade código adicional para pantallas más grandes.
+
+   @media (min-width: X) = "cuando la pantalla tenga AL MENOS X px de ancho"
+   Esto es "min-width" no "max-width" porque estamos yendo de pequeño a grande.
+*/
+@media (min-width: 768px) {
+    /* Tablet: 2 columnas de proyectos */
+    .proyectos__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Desktop: aumentar espaciado base */
+    :root {
+        --espaciado: 24px;
+    }
+
+    .header {
+        padding: 60px 0;
+    }
+}
+
+/* --------------------------------------------
+   CONCEPTOS CLAVE PARA RECORDAR
+   --------------------------------------------
+
+   1. VARIABLES: Cambian valores en un lugar, afectan a todo el documento.
+
+   2. BEM: .bloque__elemento--modificador
+      - Bloque: componente independiente (tarjeta)
+      - Elemento: parte del bloque (tarjeta__titulo)
+      - Modificador: variante del bloque (tarjeta--destacada)
+
+   3. FLEXBOX: Para layouts de una dimensión (fila O columna).
+      display: flex
+      justify-content: eje principal
+      align-items: eje secundario
+      flex-wrap: wrap para multivínea
+
+   4. GRID: Para layouts de dos dimensiones (filas Y columnas).
+      display: grid
+      grid-template-columns: repeat(n, 1fr)
+      gap: Xpx
+
+   5. MEDIA QUERIES: Mobile first = añadir complejidad al agrandar pantalla.
+      @media (min-width: X) { }
+
+   6. TRANSICIONES: Solo animan propiedades que cambian de valor.
+      transition: propiedad duración;
+
+   7. BOX-SIZING: border-box hace que padding/border se incluyan en el width.
+      Aplicar a * {}
+*/
