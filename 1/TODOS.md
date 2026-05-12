@@ -28,6 +28,14 @@
 - [x] Tema light (default)
 - [x] Tema dark + JS toggle
 
+### Fase 5 — JavaScript
+
+- [x] Arrays mock: `proyectos[]` y `skills[]`
+- [x] Renderizar skills desde array
+- [x] Renderizar proyectos desde array
+- [x] Formulario contacto (alert en submit)
+- [x] Botón cambiar tema (toggle class en body)
+
 ### Fase 6 — Responsive
 
 - [x] Mobile first (375px)
