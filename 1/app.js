@@ -52,7 +52,8 @@ const proyectos = [
 
 /* Sobre mí como array de párrafos (más fácil de mantener y traducir) */
 const sobreMi = [
-    'Soy estudiante de desarrollo web con pasión por crear experiencias digitales funcionales y atractivas. Estoy en constante aprendizaje de nuevas tecnologías.',
+    'Soy estudiante de desarrollo web con pasión por crear experiencias digitales funcionales y atractivas.',
+    'Estoy en constante aprendizaje de nuevas tecnologías.',
     'Me interesa el diseño UI/UX y la accesibilidad web. Busco oportunidades para aplicar mis conocimientos en proyectos reales.'
 ];
 
