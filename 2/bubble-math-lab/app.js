@@ -5,9 +5,12 @@
   const DRAG_THRESHOLD_PX = 10;
   const MAX_SUM = 99;
 
+  /** Enteros menores que esto no se descomponen (piezas base: 1–4 se combinan, no se rompen). */
+  const MIN_DECOMPOSE = 5;
+
   const HELP_MESSAGES = [
-    "Busca dos burbujas que sumen 10.",
-    "Puedes romper un número en partes con un clic (si se puede dividir).",
+    "Los números del 1 al 4 no se rompen: son piezas pequeñas para sumar.",
+    "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
     "Combina primero los números redondos: suele ser más fácil.",
     "Primero forma 10, luego suma lo que sobra.",
   ];
@@ -16,8 +19,16 @@
     "Casi. Intenta combinar primero los números que hacen 10.",
     "Todavía no. Prueba otra combinación.",
     "Casi. Mira si puedes formar un número redondo.",
-    "Intenta descomponer una burbuja primero.",
+    "Prueba combinar burbujas o descomponer una que sea " + MIN_DECOMPOSE + " o más (si se puede).",
   ];
+
+  const MERGE_WRONG_HINTS = [
+    "Ese no es el resultado de esta suma. ¡Inténtalo de nuevo!",
+    "Casi. Sumá otra vez con calma y escribe el número.",
+    "Revisa si sumaste bien las dos burbujas. Puedes intentarlo otra vez.",
+  ];
+
+  let mergeWrongIndex = 0;
 
   let idCounter = 0;
   function nextId() {
@@ -53,15 +64,12 @@
   }
 
   /**
-   * Reglas pedagógicas del spec.
+   * Reglas pedagógicas del spec + reglas de producto.
    * @param {number} n
    * @returns {[number, number] | null}
    */
   function decomposeParts(n) {
-    if (!Number.isFinite(n) || n < 2) return null;
-    if (n === 2) return [1, 1];
-    if (n === 3) return [2, 1];
-    if (n === 4) return [2, 2];
+    if (!Number.isFinite(n) || n < MIN_DECOMPOSE) return null;
     if (n === 5) return null;
     if (n <= 9) return [5, n - 5];
     if (n === 10) return [5, 5];
@@ -106,6 +114,15 @@
 
   let drag = null;
   let helpIndex = 0;
+  /** Evita doble descomposición mientras corre la animación */
+  let decomposeAnimating = false;
+
+  function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  /** @type {null | { idA: string, idB: string, v1: number, v2: number, sum: number, nx: number, ny: number }} */
+  let pendingMerge = null;
 
   const els = {
     screenStart: document.getElementById("screen-start"),
@@ -127,6 +144,12 @@
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
+    mergeModal: document.getElementById("modal-merge"),
+    mergePrompt: document.getElementById("modal-merge-prompt"),
+    mergeHint: document.getElementById("modal-merge-hint"),
+    mergeForm: document.getElementById("form-merge"),
+    mergeAnswer: document.getElementById("merge-answer"),
+    mergeFeedback: document.getElementById("merge-feedback"),
     confetti: document.getElementById("confetti-root"),
   };
 
@@ -181,7 +204,10 @@
     el.dataset.id = b.id;
     el.setAttribute("role", "button");
     el.setAttribute("aria-label", "Burbuja valor " + b.value);
-    el.textContent = String(b.value);
+    const inner = document.createElement("span");
+    inner.className = "bubble__inner";
+    inner.textContent = String(b.value);
+    el.appendChild(inner);
     placeBubbleEl(el, b.x, b.y);
     el.addEventListener("pointerdown", onBubblePointerDown);
     els.playArea.appendChild(el);
@@ -215,6 +241,7 @@
   }
 
   function startChallenge(resetIndex) {
+    closeMergeModalCancelled();
     const pair = generatePair(state.level);
     state.leftNumber = pair.a;
     state.rightNumber = pair.b;
@@ -231,6 +258,7 @@
   }
 
   function resetTurn() {
+    closeMergeModalCancelled();
     state.bubbles = initialBubbleLayout();
     state.attempts = 0;
     renderBubbles();
@@ -253,6 +281,70 @@
     return els.playArea.getBoundingClientRect();
   }
 
+  function spawnSplitParticles(bubbleEl) {
+    const br = bubbleEl.getBoundingClientRect();
+    const pr = els.playArea.getBoundingClientRect();
+    const cx = br.left + br.width / 2 - pr.left;
+    const cy = br.top + br.height / 2 - pr.top;
+    const colors = ["#7cffdf", "#c084fc", "#fef08a", "#ffffff", "#38bdf8"];
+    const n = 14;
+    for (let i = 0; i < n; i += 1) {
+      const p = document.createElement("span");
+      p.className = "split-particle";
+      p.style.left = cx + "px";
+      p.style.top = cy + "px";
+      const ang = (Math.PI * 2 * i) / n + Math.random() * 0.35;
+      const dist = 32 + Math.random() * 44;
+      p.style.setProperty("--split-dx", Math.cos(ang) * dist + "px");
+      p.style.setProperty("--split-dy", Math.sin(ang) * dist + "px");
+      p.style.background = colors[i % colors.length];
+      els.playArea.appendChild(p);
+      window.setTimeout(() => p.remove(), 650);
+    }
+  }
+
+  function applyEmergeFromSplit(parentX, parentY, childIds) {
+    const r = playAreaRect();
+    const w = r.width;
+    const h = r.height;
+    for (const id of childIds) {
+      const b = findBubble(id);
+      if (!b) continue;
+      const el = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      if (!el) continue;
+      const fromX = ((parentX - b.x) / 100) * w;
+      const fromY = ((parentY - b.y) / 100) * h;
+      el.style.setProperty("--split-from-x", fromX + "px");
+      el.style.setProperty("--split-from-y", fromY + "px");
+      el.classList.add("bubble--emerge");
+      el.addEventListener(
+        "animationend",
+        (e) => {
+          const name = e.animationName || "";
+          if (!name.includes("bubble-emerge-from-split")) return;
+          el.classList.remove("bubble--emerge");
+          el.style.removeProperty("--split-from-x");
+          el.style.removeProperty("--split-from-y");
+        },
+        { once: true }
+      );
+    }
+  }
+
+  function finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2) {
+    removeBubbleById(b.id);
+    state.bubbles.push(
+      { id: id1, value: v1, x: x1, y: y1, source: b.source },
+      { id: id2, value: v2, x: x2, y: y2, source: b.source }
+    );
+    renderBubbles();
+    if (!prefersReducedMotion()) {
+      applyEmergeFromSplit(ox, oy, [id1, id2]);
+    }
+    decomposeAnimating = false;
+    setHelp("Bien. Ahora acerca las piezas que quieras sumar.");
+  }
+
   function bubbleCenterClient(b) {
     const r = playAreaRect();
     const p = pxFromPercent(r.width, r.height, b.x, b.y);
@@ -266,6 +358,7 @@
   }
 
   function onBubblePointerDown(ev) {
+    if (!els.mergeModal.hidden) return;
     const el = ev.currentTarget;
     const id = el.dataset.id;
     const b = findBubble(id);
@@ -324,6 +417,93 @@
     });
   }
 
+  function openMergeModal(b, partner) {
+    const nx = (b.x + partner.x) / 2;
+    const ny = (b.y + partner.y) / 2;
+    pendingMerge = {
+      idA: b.id,
+      idB: partner.id,
+      v1: b.value,
+      v2: partner.value,
+      sum: b.value + partner.value,
+      nx,
+      ny,
+    };
+    els.mergePrompt.textContent = b.value + " + " + partner.value;
+    els.mergeHint.textContent =
+      "Escribe cuánto es esta suma. Si aciertas, las burbujas se fusionarán con un festejo.";
+    els.mergeAnswer.value = "";
+    els.mergeFeedback.hidden = true;
+    els.mergeFeedback.textContent = "";
+    els.mergeFeedback.classList.remove("merge-form__feedback--ok");
+    els.mergeModal.hidden = false;
+    els.mergeModal.setAttribute("aria-hidden", "false");
+    window.setTimeout(() => {
+      els.mergeAnswer.focus();
+      els.mergeAnswer.select();
+    }, 50);
+  }
+
+  function hideMergeModalUI() {
+    els.mergeModal.hidden = true;
+    els.mergeModal.setAttribute("aria-hidden", "true");
+    els.mergeFeedback.hidden = true;
+    els.mergeFeedback.textContent = "";
+    els.mergeFeedback.classList.remove("merge-form__feedback--ok");
+    els.mergeAnswer.value = "";
+  }
+
+  function closeMergeModalCancelled() {
+    pendingMerge = null;
+    hideMergeModalUI();
+  }
+
+  function executePendingMerge() {
+    if (!pendingMerge) return;
+    const pm = pendingMerge;
+    pendingMerge = null;
+    removeBubbleById(pm.idA);
+    removeBubbleById(pm.idB);
+    state.bubbles.push({
+      id: nextId(),
+      value: pm.sum,
+      x: pm.nx,
+      y: pm.ny,
+      source: "derived",
+    });
+    hideMergeModalUI();
+    renderBubbles();
+    spawnMergeFireworks();
+    setHelp("¡Muy bien! Sigue uniendo piezas para simplificar la suma.");
+  }
+
+  function spawnMergeFireworks() {
+    const rect = document.body.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height * 0.4;
+    const colors = ["#7cffdf", "#fde047", "#f472b6", "#c084fc", "#38bdf8", "#ffffff"];
+    const waves = 3;
+    const perWave = 40;
+    for (let w = 0; w < waves; w += 1) {
+      window.setTimeout(() => {
+        for (let i = 0; i < perWave; i += 1) {
+          const p = document.createElement("span");
+          p.className = "firework-ray";
+          p.style.left = cx + (Math.random() * 24 - 12) + "px";
+          p.style.top = cy + (Math.random() * 24 - 12) + "px";
+          p.style.background = colors[i % colors.length];
+          const ang = (Math.PI * 2 * i) / perWave + Math.random() * 0.25;
+          const dist = 100 + Math.random() * 160;
+          p.style.setProperty("--fw-dx", Math.cos(ang) * dist + "px");
+          p.style.setProperty("--fw-dy", Math.sin(ang) * dist + "px");
+          p.style.animationDuration = 0.85 + Math.random() * 0.25 + "s";
+          els.confetti.appendChild(p);
+          window.setTimeout(() => p.remove(), 1300);
+        }
+      }, w * 130);
+    }
+  }
+
   function tryMergeOrPlace(b, el, centerX, centerY) {
     const selfCenter = { x: centerX, y: centerY };
     let partner = null;
@@ -338,19 +518,7 @@
       }
     }
     if (partner && best < MERGE_DISTANCE_PX) {
-      const sum = b.value + partner.value;
-      const nx = (b.x + partner.x) / 2;
-      const ny = (b.y + partner.y) / 2;
-      removeBubbleById(b.id);
-      removeBubbleById(partner.id);
-      state.bubbles.push({
-        id: nextId(),
-        value: sum,
-        x: nx,
-        y: ny,
-        source: "derived",
-      });
-      renderBubbles();
+      openMergeModal(b, partner);
       return true;
     }
     return false;
@@ -372,6 +540,7 @@
   }
 
   function tryResultDrop(b, clientX, clientY) {
+    if (!els.mergeModal.hidden) return false;
     if (!pointInResultZone(clientX, clientY)) return false;
     if (b.value === state.expectedResult) {
       openSuccessModal();
@@ -411,6 +580,7 @@
   }
 
   function openSuccessModal() {
+    closeMergeModalCancelled();
     els.modalMsg.textContent =
       state.leftNumber + " + " + state.rightNumber + " = " + state.expectedResult + ". " +
       "Usaste descomposición y fusión para llegar al resultado.";
@@ -424,6 +594,20 @@
     els.modal.setAttribute("aria-hidden", "true");
   }
 
+  function decomposeBlockedMessage(value) {
+    if (value < MIN_DECOMPOSE) {
+      return (
+        "Los números menores que " +
+        MIN_DECOMPOSE +
+        " no se descomponen: son piezas base. Combínalos con otras burbujas."
+      );
+    }
+    if (value === 5) {
+      return "El 5 ya es una pieza clave. Combínalo con otro número para seguir.";
+    }
+    return "Esa burbuja ya no se puede dividir más. Combínala con otra.";
+  }
+
   function tryDecompose(b) {
     const parts = decomposeParts(b.value);
     if (!parts) {
@@ -433,29 +617,53 @@
         void el.offsetWidth;
         el.classList.add("bubble--shake");
       }
-      setHelp("Esa burbuja ya no se puede dividir más. Combínala con otra.");
+      setHelp(decomposeBlockedMessage(b.value));
       return;
     }
+
+    if (decomposeAnimating) return;
+
     const [v1, v2] = parts;
     const ox = b.x;
     const oy = b.y;
-    removeBubbleById(b.id);
-    state.bubbles.push({
-      id: nextId(),
-      value: v1,
-      x: Math.max(6, ox - 10),
-      y: Math.min(86, oy + 6),
-      source: b.source,
-    });
-    state.bubbles.push({
-      id: nextId(),
-      value: v2,
-      x: Math.min(94, ox + 10),
-      y: Math.min(86, oy + 6),
-      source: b.source,
-    });
-    renderBubbles();
-    setHelp("Bien. Ahora acerca las piezas que quieras sumar.");
+    const x1 = Math.max(6, ox - 10);
+    const y1 = Math.min(86, oy + 6);
+    const x2 = Math.min(94, ox + 10);
+    const y2 = Math.min(86, oy + 6);
+    const id1 = nextId();
+    const id2 = nextId();
+
+    const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+    if (!el || prefersReducedMotion()) {
+      decomposeAnimating = true;
+      finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
+      return;
+    }
+
+    decomposeAnimating = true;
+    spawnSplitParticles(el);
+    el.classList.add("bubble--splitting");
+
+    let finalized = false;
+    const run = () => {
+      if (finalized) return;
+      finalized = true;
+      finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
+    };
+
+    const fallbackMs = 580;
+    const tid = window.setTimeout(run, fallbackMs);
+    el.addEventListener(
+      "animationend",
+      (e) => {
+        if (e.target !== el) return;
+        const name = e.animationName || "";
+        if (!name.includes("bubble-splitting")) return;
+        window.clearTimeout(tid);
+        run();
+      },
+      { once: true }
+    );
   }
 
   function onPointerMove(ev) {
@@ -526,6 +734,7 @@
 
   els.btnHome.addEventListener("click", () => {
     closeSuccessModal();
+    closeMergeModalCancelled();
     showScreen("start");
   });
 
@@ -544,8 +753,38 @@
     });
   });
 
+  els.mergeForm.addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    if (!pendingMerge) return;
+    const raw = els.mergeAnswer.value.trim();
+    const n = parseInt(raw, 10);
+    if (raw === "" || Number.isNaN(n)) {
+      els.mergeFeedback.textContent = "Escribe un número.";
+      els.mergeFeedback.hidden = false;
+      els.mergeFeedback.classList.remove("merge-form__feedback--ok");
+      els.mergeAnswer.focus();
+      return;
+    }
+    if (n !== pendingMerge.sum) {
+      els.mergeFeedback.textContent = MERGE_WRONG_HINTS[mergeWrongIndex % MERGE_WRONG_HINTS.length];
+      mergeWrongIndex += 1;
+      els.mergeFeedback.hidden = false;
+      els.mergeFeedback.classList.remove("merge-form__feedback--ok");
+      els.mergeAnswer.value = "";
+      els.mergeAnswer.focus();
+      return;
+    }
+    executePendingMerge();
+  });
+
+  els.mergeModal.querySelectorAll("[data-close-merge]").forEach((n) => {
+    n.addEventListener("click", () => {
+      closeMergeModalCancelled();
+    });
+  });
+
   window.setInterval(() => {
-    if (!els.screenGame.hidden && els.modal.hidden) {
+    if (!els.screenGame.hidden && els.modal.hidden && els.mergeModal.hidden) {
       rotateHelp();
     }
   }, 12000);
