@@ -1,0 +1,555 @@
+(function () {
+  "use strict";
+
+  const MERGE_DISTANCE_PX = 76;
+  const DRAG_THRESHOLD_PX = 10;
+  const MAX_SUM = 99;
+
+  const HELP_MESSAGES = [
+    "Busca dos burbujas que sumen 10.",
+    "Puedes romper un número en partes con un clic (si se puede dividir).",
+    "Combina primero los números redondos: suele ser más fácil.",
+    "Primero forma 10, luego suma lo que sobra.",
+  ];
+
+  const WRONG_MESSAGES = [
+    "Casi. Intenta combinar primero los números que hacen 10.",
+    "Todavía no. Prueba otra combinación.",
+    "Casi. Mira si puedes formar un número redondo.",
+    "Intenta descomponer una burbuja primero.",
+  ];
+
+  let idCounter = 0;
+  function nextId() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    idCounter += 1;
+    return "b-" + idCounter;
+  }
+
+  function randomInt(min, max) {
+    return min + Math.floor(Math.random() * (max - min + 1));
+  }
+
+  /** @returns {{ a: number, b: number, sum: number }} */
+  function generatePair(level) {
+    let a;
+    let b;
+    if (level === 1) {
+      a = randomInt(2, 9);
+      b = randomInt(2, 9);
+    } else if (level === 2) {
+      a = randomInt(5, 19);
+      b = randomInt(5, 19);
+    } else {
+      a = randomInt(10, 49);
+      b = randomInt(10, 49);
+    }
+    if (a + b > MAX_SUM) {
+      return generatePair(level);
+    }
+    return { a, b, sum: a + b };
+  }
+
+  /**
+   * Reglas pedagógicas del spec.
+   * @param {number} n
+   * @returns {[number, number] | null}
+   */
+  function decomposeParts(n) {
+    if (!Number.isFinite(n) || n < 2) return null;
+    if (n === 2) return [1, 1];
+    if (n === 3) return [2, 1];
+    if (n === 4) return [2, 2];
+    if (n === 5) return null;
+    if (n <= 9) return [5, n - 5];
+    if (n === 10) return [5, 5];
+    if (n > 10 && n % 10 === 0) {
+      const half = n / 2;
+      return [half, half];
+    }
+    const tens = Math.floor(n / 10) * 10;
+    const ones = n % 10;
+    if (ones === 0) return null;
+    return [tens, ones];
+  }
+
+  /** @type {{
+   *   level: number,
+   *   operation: string,
+   *   leftNumber: number,
+   *   rightNumber: number,
+   *   expectedResult: number,
+   *   challengeIndex: number,
+   *   stars: number,
+   *   attempts: number,
+   *   bubbles: Array<{
+   *     id: string,
+   *     value: number,
+   *     x: number,
+   *     y: number,
+   *     source: string,
+   *   }>,
+   * }} */
+  const state = {
+    level: 1,
+    operation: "addition",
+    leftNumber: 7,
+    rightNumber: 8,
+    expectedResult: 15,
+    challengeIndex: 1,
+    stars: 3,
+    attempts: 0,
+    bubbles: [],
+  };
+
+  let drag = null;
+  let helpIndex = 0;
+
+  const els = {
+    screenStart: document.getElementById("screen-start"),
+    screenGame: document.getElementById("screen-game"),
+    levelSelect: document.getElementById("level-select"),
+    btnPlay: document.getElementById("btn-play"),
+    btnHome: document.getElementById("btn-home"),
+    btnReset: document.getElementById("btn-reset-turn"),
+    btnNew: document.getElementById("btn-new-challenge"),
+    hudLevel: document.getElementById("hud-level"),
+    hudChallenge: document.getElementById("hud-challenge"),
+    hudStars: document.getElementById("hud-stars"),
+    eqLeft: document.getElementById("eq-left"),
+    eqRight: document.getElementById("eq-right"),
+    eqResult: document.getElementById("eq-result-label"),
+    helpBanner: document.getElementById("help-banner"),
+    playArea: document.getElementById("play-area"),
+    resultZone: document.getElementById("result-zone"),
+    modal: document.getElementById("modal-success"),
+    modalMsg: document.getElementById("modal-success-msg"),
+    modalNext: document.getElementById("modal-next"),
+    confetti: document.getElementById("confetti-root"),
+  };
+
+  function showScreen(name) {
+    const isStart = name === "start";
+    els.screenStart.hidden = !isStart;
+    els.screenGame.hidden = isStart;
+  }
+
+  function setHudStars() {
+    const n = Math.max(0, Math.min(3, state.stars));
+    els.hudStars.textContent = "★".repeat(n) + "☆".repeat(3 - n);
+  }
+
+  function setHelp(text) {
+    els.helpBanner.textContent = text;
+  }
+
+  function rotateHelp() {
+    setHelp(HELP_MESSAGES[helpIndex % HELP_MESSAGES.length]);
+    helpIndex += 1;
+  }
+
+  function syncEquation() {
+    els.eqLeft.textContent = String(state.leftNumber);
+    els.eqRight.textContent = String(state.rightNumber);
+    els.eqResult.textContent = "?";
+    els.hudLevel.textContent = String(state.level);
+    els.hudChallenge.textContent = String(state.challengeIndex);
+    setHudStars();
+  }
+
+  function clearBubbleEls() {
+    els.playArea.querySelectorAll(".bubble").forEach((n) => n.remove());
+  }
+
+  function pxFromPercent(pxW, pxH, xPct, yPct) {
+    return {
+      x: (xPct / 100) * pxW,
+      y: (yPct / 100) * pxH,
+    };
+  }
+
+  function placeBubbleEl(el, xPct, yPct) {
+    el.style.left = xPct + "%";
+    el.style.top = yPct + "%";
+  }
+
+  function createBubbleEl(b) {
+    const el = document.createElement("div");
+    el.className = "bubble";
+    el.dataset.id = b.id;
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-label", "Burbuja valor " + b.value);
+    el.textContent = String(b.value);
+    placeBubbleEl(el, b.x, b.y);
+    el.addEventListener("pointerdown", onBubblePointerDown);
+    els.playArea.appendChild(el);
+    return el;
+  }
+
+  function renderBubbles() {
+    clearBubbleEls();
+    for (const b of state.bubbles) {
+      createBubbleEl(b);
+    }
+  }
+
+  function initialBubbleLayout() {
+    return [
+      {
+        id: nextId(),
+        value: state.leftNumber,
+        x: 28,
+        y: 38,
+        source: "left",
+      },
+      {
+        id: nextId(),
+        value: state.rightNumber,
+        x: 72,
+        y: 38,
+        source: "right",
+      },
+    ];
+  }
+
+  function startChallenge(resetIndex) {
+    const pair = generatePair(state.level);
+    state.leftNumber = pair.a;
+    state.rightNumber = pair.b;
+    state.expectedResult = pair.sum;
+    if (!resetIndex) {
+      state.challengeIndex += 1;
+    }
+    state.attempts = 0;
+    state.stars = 3;
+    state.bubbles = initialBubbleLayout();
+    syncEquation();
+    renderBubbles();
+    rotateHelp();
+  }
+
+  function resetTurn() {
+    state.bubbles = initialBubbleLayout();
+    state.attempts = 0;
+    renderBubbles();
+    setHelp("Turno reiniciado. " + HELP_MESSAGES[0]);
+  }
+
+  function newChallengeFromMenu() {
+    startChallenge(false);
+  }
+
+  function findBubble(id) {
+    return state.bubbles.find((b) => b.id === id) || null;
+  }
+
+  function removeBubbleById(id) {
+    state.bubbles = state.bubbles.filter((b) => b.id !== id);
+  }
+
+  function playAreaRect() {
+    return els.playArea.getBoundingClientRect();
+  }
+
+  function bubbleCenterClient(b) {
+    const r = playAreaRect();
+    const p = pxFromPercent(r.width, r.height, b.x, b.y);
+    return { x: r.left + p.x, y: r.top + p.y };
+  }
+
+  function distance(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.hypot(dx, dy);
+  }
+
+  function onBubblePointerDown(ev) {
+    const el = ev.currentTarget;
+    const id = el.dataset.id;
+    const b = findBubble(id);
+    if (!b) return;
+    ev.preventDefault();
+    el.setPointerCapture(ev.pointerId);
+    const center = bubbleCenterClient(b);
+    drag = {
+      id,
+      pointerId: ev.pointerId,
+      startClient: { x: ev.clientX, y: ev.clientY },
+      grabOffset: {
+        x: ev.clientX - center.x,
+        y: ev.clientY - center.y,
+      },
+      moved: false,
+      origX: b.x,
+      origY: b.y,
+    };
+    el.classList.add("bubble--dragging");
+    clearMergeHighlights();
+  }
+
+  function moveBubbleToClient(el, b, clientX, clientY, grabOffset) {
+    const r = playAreaRect();
+    const cx = clientX - grabOffset.x;
+    const cy = clientY - grabOffset.y;
+    const lx = cx - r.left;
+    const ly = cy - r.top;
+    const nx = (lx / r.width) * 100;
+    const ny = (ly / r.height) * 100;
+    b.x = Math.min(96, Math.max(4, nx));
+    b.y = Math.min(92, Math.max(8, ny));
+    placeBubbleEl(el, b.x, b.y);
+  }
+
+  function highlightMergeCandidates(activeId, centerX, centerY) {
+    const pt = { x: centerX, y: centerY };
+    clearMergeHighlights();
+    for (const o of state.bubbles) {
+      if (o.id === activeId) continue;
+      const c = bubbleCenterClient(o);
+      if (distance(pt, c) < MERGE_DISTANCE_PX) {
+        const elA = els.playArea.querySelector('.bubble[data-id="' + activeId + '"]');
+        const elO = els.playArea.querySelector('.bubble[data-id="' + o.id + '"]');
+        if (elA) elA.classList.add("bubble--merge-target");
+        if (elO) elO.classList.add("bubble--merge-target");
+        break;
+      }
+    }
+  }
+
+  function clearMergeHighlights() {
+    els.playArea.querySelectorAll(".bubble--merge-target").forEach((n) => {
+      n.classList.remove("bubble--merge-target");
+    });
+  }
+
+  function tryMergeOrPlace(b, el, centerX, centerY) {
+    const selfCenter = { x: centerX, y: centerY };
+    let partner = null;
+    let best = MERGE_DISTANCE_PX;
+    for (const o of state.bubbles) {
+      if (o.id === b.id) continue;
+      const c = bubbleCenterClient(o);
+      const d = distance(selfCenter, c);
+      if (d < best) {
+        best = d;
+        partner = o;
+      }
+    }
+    if (partner && best < MERGE_DISTANCE_PX) {
+      const sum = b.value + partner.value;
+      const nx = (b.x + partner.x) / 2;
+      const ny = (b.y + partner.y) / 2;
+      removeBubbleById(b.id);
+      removeBubbleById(partner.id);
+      state.bubbles.push({
+        id: nextId(),
+        value: sum,
+        x: nx,
+        y: ny,
+        source: "derived",
+      });
+      renderBubbles();
+      return true;
+    }
+    return false;
+  }
+
+  function resultZoneRect() {
+    return els.resultZone.getBoundingClientRect();
+  }
+
+  function pointInResultZone(clientX, clientY) {
+    const z = resultZoneRect();
+    const pad = 14;
+    return (
+      clientX >= z.left - pad &&
+      clientX <= z.right + pad &&
+      clientY >= z.top - pad &&
+      clientY <= z.bottom + pad
+    );
+  }
+
+  function tryResultDrop(b, clientX, clientY) {
+    if (!pointInResultZone(clientX, clientY)) return false;
+    if (b.value === state.expectedResult) {
+      openSuccessModal();
+      return true;
+    }
+    state.attempts += 1;
+    if (state.stars > 0) state.stars -= 1;
+    setHudStars();
+    const msg = WRONG_MESSAGES[(state.attempts - 1) % WRONG_MESSAGES.length];
+    setHelp(msg);
+    const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+    if (el) {
+      el.classList.remove("bubble--shake");
+      void el.offsetWidth;
+      el.classList.add("bubble--shake");
+    }
+    if (state.attempts % 2 === 0) rotateHelp();
+    return true;
+  }
+
+  function spawnConfetti() {
+    els.confetti.innerHTML = "";
+    const colors = ["#7cffdf", "#c084fc", "#fde047", "#f472b6", "#38bdf8"];
+    const rect = document.body.getBoundingClientRect();
+    for (let i = 0; i < 36; i += 1) {
+      const p = document.createElement("span");
+      p.className = "confetti-piece";
+      p.style.left = Math.random() * rect.width + "px";
+      p.style.top = -20 + Math.random() * 40 + "px";
+      p.style.background = colors[i % colors.length];
+      p.style.animationDuration = 1.4 + Math.random() * 0.8 + "s";
+      els.confetti.appendChild(p);
+    }
+    window.setTimeout(() => {
+      els.confetti.innerHTML = "";
+    }, 2200);
+  }
+
+  function openSuccessModal() {
+    els.modalMsg.textContent =
+      state.leftNumber + " + " + state.rightNumber + " = " + state.expectedResult + ". " +
+      "Usaste descomposición y fusión para llegar al resultado.";
+    els.modal.hidden = false;
+    els.modal.setAttribute("aria-hidden", "false");
+    spawnConfetti();
+  }
+
+  function closeSuccessModal() {
+    els.modal.hidden = true;
+    els.modal.setAttribute("aria-hidden", "true");
+  }
+
+  function tryDecompose(b) {
+    const parts = decomposeParts(b.value);
+    if (!parts) {
+      const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+      if (el) {
+        el.classList.remove("bubble--shake");
+        void el.offsetWidth;
+        el.classList.add("bubble--shake");
+      }
+      setHelp("Esa burbuja ya no se puede dividir más. Combínala con otra.");
+      return;
+    }
+    const [v1, v2] = parts;
+    const ox = b.x;
+    const oy = b.y;
+    removeBubbleById(b.id);
+    state.bubbles.push({
+      id: nextId(),
+      value: v1,
+      x: Math.max(6, ox - 10),
+      y: Math.min(86, oy + 6),
+      source: b.source,
+    });
+    state.bubbles.push({
+      id: nextId(),
+      value: v2,
+      x: Math.min(94, ox + 10),
+      y: Math.min(86, oy + 6),
+      source: b.source,
+    });
+    renderBubbles();
+    setHelp("Bien. Ahora acerca las piezas que quieras sumar.");
+  }
+
+  function onPointerMove(ev) {
+    if (!drag || ev.pointerId !== drag.pointerId) return;
+    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
+    const b = findBubble(drag.id);
+    if (!el || !b) return;
+    const dx = ev.clientX - drag.startClient.x;
+    const dy = ev.clientY - drag.startClient.y;
+    if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
+      drag.moved = true;
+    }
+    if (drag.moved) {
+      moveBubbleToClient(el, b, ev.clientX, ev.clientY, drag.grabOffset);
+      const cx = ev.clientX - drag.grabOffset.x;
+      const cy = ev.clientY - drag.grabOffset.y;
+      highlightMergeCandidates(drag.id, cx, cy);
+      els.resultZone.classList.toggle("result-zone--hover", pointInResultZone(cx, cy));
+    }
+  }
+
+  function onPointerUp(ev) {
+    if (!drag || ev.pointerId !== drag.pointerId) return;
+    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
+    const b = findBubble(drag.id);
+    const hadDrag = drag;
+    drag = null;
+    els.resultZone.classList.remove("result-zone--hover");
+    clearMergeHighlights();
+    if (el) {
+      el.releasePointerCapture(ev.pointerId);
+      el.classList.remove("bubble--dragging");
+    }
+    if (!b) return;
+    if (!hadDrag.moved) {
+      tryDecompose(b);
+      return;
+    }
+    const cx = ev.clientX - hadDrag.grabOffset.x;
+    const cy = ev.clientY - hadDrag.grabOffset.y;
+    if (tryMergeOrPlace(b, el, cx, cy)) {
+      return;
+    }
+    if (tryResultDrop(b, cx, cy)) {
+      if (b.value !== state.expectedResult) {
+        const still = findBubble(b.id);
+        if (still) {
+          still.x = hadDrag.origX;
+          still.y = hadDrag.origY;
+          renderBubbles();
+        }
+      }
+    }
+  }
+
+  function bindGlobalPointer() {
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    document.addEventListener("pointercancel", onPointerUp);
+  }
+
+  els.btnPlay.addEventListener("click", () => {
+    state.level = parseInt(els.levelSelect.value, 10) || 1;
+    state.challengeIndex = 0;
+    showScreen("game");
+    startChallenge(false);
+  });
+
+  els.btnHome.addEventListener("click", () => {
+    closeSuccessModal();
+    showScreen("start");
+  });
+
+  els.btnReset.addEventListener("click", resetTurn);
+
+  els.btnNew.addEventListener("click", newChallengeFromMenu);
+
+  els.modalNext.addEventListener("click", () => {
+    closeSuccessModal();
+    newChallengeFromMenu();
+  });
+
+  els.modal.querySelectorAll("[data-close-modal]").forEach((n) => {
+    n.addEventListener("click", () => {
+      closeSuccessModal();
+    });
+  });
+
+  window.setInterval(() => {
+    if (!els.screenGame.hidden && els.modal.hidden) {
+      rotateHelp();
+    }
+  }, 12000);
+
+  bindGlobalPointer();
+  setHelp(HELP_MESSAGES[0]);
+})();
