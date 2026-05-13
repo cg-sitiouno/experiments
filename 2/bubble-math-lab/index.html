@@ -38,6 +38,15 @@
               <input type="radio" name="play-mode" value="tutorial" />
               Tutorial (aprender jugando, 3 pasos)
             </label>
+            <label class="mode-options__choice mode-options__choice--mystery">
+              <input type="radio" name="play-mode" value="mystery" />
+              <span class="mode-options__choice-text">
+                Cajita Misteriosa
+                <small class="mode-options__hint"
+                  >Encuentra el número escondido en la operación.</small
+                >
+              </span>
+            </label>
           </fieldset>
           <button type="button" id="btn-play" class="btn btn--primary">Comenzar</button>
         </div>
@@ -71,12 +80,23 @@
           </div>
         </header>
 
-        <div class="equation" aria-live="polite">
+        <div id="equation" class="equation" aria-live="polite">
           <span class="equation__part" id="eq-left">7</span>
           <span class="equation__op" id="eq-op" aria-hidden="true">+</span>
           <span class="equation__part" id="eq-right">8</span>
           <span class="equation__equals" aria-hidden="true">=</span>
           <span class="equation__result" id="eq-result-label">?</span>
+        </div>
+
+        <div
+          id="mystery-target"
+          class="mystery-target"
+          role="region"
+          aria-label="Zona para colocar el número escondido"
+          hidden
+        >
+          <span class="mystery-target__label">Arrastrá aquí la burbuja escondida</span>
+          <span class="mystery-target__bubble" aria-hidden="true">?</span>
         </div>
 
         <div class="fusion-bar" id="fusion-bar" role="group" aria-label="Barra de autofusión">
@@ -99,6 +119,9 @@
         ></div>
 
         <footer class="game-footer">
+          <button type="button" id="btn-mystery-help" class="btn btn--ghost" hidden>
+            Ayúdame a empezar
+          </button>
           <button type="button" id="btn-reset-turn" class="btn btn--ghost">Reiniciar turno</button>
           <button type="button" id="btn-new-challenge" class="btn btn--secondary">Nuevo reto</button>
           <button type="button" id="btn-home" class="btn btn--ghost">Inicio</button>

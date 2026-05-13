@@ -196,6 +196,125 @@
   }
 
   /**
+   * Progresión pedagógica (spec_eq §8): bloques de 3 retos por tipo, luego mixto.
+   * @param {number} challengeIndex índice 1-based del reto en modo mystery
+   */
+  function mysteryStageFromChallengeIndex(challengeIndex) {
+    const phase = Math.floor((challengeIndex - 1) / 3);
+    if (phase >= 3) return "mixed";
+    const types = /** @type {const} */ ([
+      "missing_addend",
+      "missing_subtrahend",
+      "missing_minuend",
+    ]);
+    return types[phase];
+  }
+
+  /**
+   * @param {number} tier
+   * @param {number} challengeIndex
+   */
+  function generateMysteryChallenge(tier, challengeIndex) {
+    const stage = mysteryStageFromChallengeIndex(challengeIndex);
+    const type =
+      stage === "mixed"
+        ? (["missing_addend", "missing_subtrahend", "missing_minuend"][randomInt(0, 2)])
+        : stage;
+
+    for (let attempt = 0; attempt < 55; attempt += 1) {
+      if (type === "missing_addend") {
+        const a = randomInt(2, 9);
+        const hiddenValue = randomInt(2, 9);
+        const expectedResult = a + hiddenValue;
+        if (expectedResult <= MAX_SUM) {
+          return {
+            mysteryType: "missing_addend",
+            challengeOp: "add",
+            leftNumber: null,
+            rightNumber: a,
+            expectedResult,
+            hiddenValue,
+            hiddenPosition: /** @type {const} */ ("left"),
+          };
+        }
+        continue;
+      }
+      if (type === "missing_subtrahend") {
+        const maxL = tier >= 3 ? Math.min(48, MAX_SUM - 1) : 18;
+        const minL = tier >= 2 ? 10 : 6;
+        const leftNumber = randomInt(minL, maxL);
+        const expectedResult = randomInt(2, leftNumber - 2);
+        const hiddenValue = leftNumber - expectedResult;
+        if (hiddenValue >= 1 && expectedResult >= 1) {
+          return {
+            mysteryType: "missing_subtrahend",
+            challengeOp: "subtract",
+            leftNumber,
+            rightNumber: null,
+            expectedResult,
+            hiddenValue,
+            hiddenPosition: /** @type {const} */ ("right"),
+          };
+        }
+        continue;
+      }
+      const maxR = tier >= 3 ? 18 : 9;
+      const rightNumber = randomInt(2, Math.min(9, maxR));
+      const maxExp = tier >= 3 ? Math.min(28, MAX_SUM - rightNumber) : 12;
+      const expectedResult = randomInt(2, maxExp);
+      const hiddenValue = rightNumber + expectedResult;
+      if (hiddenValue <= MAX_SUM) {
+        return {
+          mysteryType: "missing_minuend",
+          challengeOp: "subtract",
+          leftNumber: null,
+          rightNumber,
+          expectedResult,
+          hiddenValue,
+          hiddenPosition: /** @type {const} */ ("left"),
+        };
+      }
+    }
+    return {
+      mysteryType: "missing_addend",
+      challengeOp: "add",
+      leftNumber: null,
+      rightNumber: 4,
+      expectedResult: 8,
+      hiddenValue: 4,
+      hiddenPosition: "left",
+    };
+  }
+
+  /**
+   * Prioridad pedagógica en Cajita Misteriosa (spec_eq §15).
+   * @param {{ id: string, value: number, source: string }} b
+   * @returns {[number, number] | null}
+   */
+  function decomposePartsForMysteryBubble(b) {
+    if (state.playMode !== "mystery" || !state.mysteryType) return null;
+    if (state.mysteryType === "missing_addend") {
+      if (
+        b.value === state.expectedResult &&
+        state.rightNumber != null &&
+        state.hiddenValue != null
+      ) {
+        const p = [state.rightNumber, state.hiddenValue].sort((x, y) => x - y);
+        return [p[0], p[1]];
+      }
+      return null;
+    }
+    if (state.mysteryType === "missing_subtrahend") {
+      if (b.value === state.leftNumber && state.expectedResult != null && state.hiddenValue != null) {
+        const p = [state.expectedResult, state.hiddenValue].sort((x, y) => x - y);
+        return [p[0], p[1]];
+      }
+      return null;
+    }
+    return null;
+  }
+
+  /**
    * Reglas pedagógicas clásicas (sin mirar el tablero).
    * @param {number} n
    * @returns {[number, number] | null}
@@ -302,6 +421,10 @@
    */
   function decomposePartsForBubble(b) {
     const n = b.value;
+    if (state.playMode === "mystery") {
+      const mysteryParts = decomposePartsForMysteryBubble(b);
+      if (mysteryParts) return mysteryParts;
+    }
     const decadeUnits = pickDecadePlusUnits(n);
     if (decadeUnits) return decadeUnits;
 
@@ -332,13 +455,16 @@
 
   /** @type {{
    *   score: number,
-   *   playMode: 'add_only' | 'sub_only' | 'mixed' | 'tutorial',
+   *   playMode: 'add_only' | 'sub_only' | 'mixed' | 'tutorial' | 'mystery',
    *   tutorialStep: number,
    *   challengeOp: 'add' | 'subtract',
-   *   leftNumber: number,
-   *   rightNumber: number,
+   *   leftNumber: number | null,
+   *   rightNumber: number | null,
    *   expectedResult: number,
    *   challengeIndex: number,
+   *   mysteryType: null | 'missing_addend' | 'missing_subtrahend' | 'missing_minuend',
+   *   hiddenValue: null | number,
+   *   hiddenPosition: null | 'left' | 'right',
    *   bubbles: Array<{
    *     id: string,
    *     value: number,
@@ -356,6 +482,9 @@
     rightNumber: 8,
     expectedResult: 15,
     challengeIndex: 1,
+    mysteryType: null,
+    hiddenValue: null,
+    hiddenPosition: null,
     bubbles: [],
   };
 
@@ -397,6 +526,9 @@
     eqOp: document.getElementById("eq-op"),
     eqRight: document.getElementById("eq-right"),
     eqResult: document.getElementById("eq-result-label"),
+    equation: document.getElementById("equation"),
+    mysteryTarget: document.getElementById("mystery-target"),
+    btnMysteryHelp: document.getElementById("btn-mystery-help"),
     fusionBar: document.getElementById("fusion-bar"),
     fusionBarFill: document.getElementById("fusion-bar-fill"),
     fusionBarLabel: document.getElementById("fusion-bar-label"),
@@ -424,6 +556,10 @@
   function syncDifficultyHud() {
     if (state.playMode === "tutorial") {
       els.hudDifficulty.textContent = "Tutorial";
+      return;
+    }
+    if (state.playMode === "mystery") {
+      els.hudDifficulty.textContent = "Cajita Misteriosa";
       return;
     }
     const tier = tierFromScore(state.score);
@@ -486,6 +622,8 @@
     if (isStart) {
       helpStickySecondary = null;
       updateHelpBanner();
+    } else {
+      syncMysteryChrome();
     }
   }
 
@@ -725,6 +863,7 @@
   function applyTutorialScreenClass() {
     if (!els.screenGame) return;
     els.screenGame.classList.toggle("screen--tutorial", state.playMode === "tutorial");
+    els.screenGame.classList.toggle("screen--mystery", state.playMode === "mystery");
   }
 
   function exitTutorialCleanup() {
@@ -738,13 +877,50 @@
     }
   }
 
+  function syncMysteryChrome() {
+    if (els.equation) {
+      els.equation.classList.toggle("equation--mystery", state.playMode === "mystery");
+    }
+    if (els.mysteryTarget) {
+      const show = state.playMode === "mystery" && !els.screenGame.hidden;
+      els.mysteryTarget.hidden = !show;
+      if (!show) {
+        els.mysteryTarget.classList.remove(
+          "mystery-target--active",
+          "mystery-target--wrong",
+          "mystery-target--success",
+        );
+      }
+    }
+    if (els.btnMysteryHelp) {
+      els.btnMysteryHelp.hidden =
+        state.playMode !== "mystery" || els.screenGame.hidden;
+    }
+  }
+
   function syncEquation() {
+    els.hudChallenge.textContent = String(state.challengeIndex);
+    syncDifficultyHud();
+
+    if (state.playMode === "mystery") {
+      const q = "?";
+      els.eqLeft.textContent = state.hiddenPosition === "left" ? q : String(state.leftNumber);
+      els.eqOp.textContent = state.challengeOp === "subtract" ? "−" : "+";
+      els.eqRight.textContent = state.hiddenPosition === "right" ? q : String(state.rightNumber);
+      els.eqResult.textContent = String(state.expectedResult);
+      els.eqLeft.classList.toggle("equation__part--mystery", state.hiddenPosition === "left");
+      els.eqRight.classList.toggle("equation__part--mystery", state.hiddenPosition === "right");
+      syncMysteryChrome();
+      return;
+    }
+
+    els.eqLeft.classList.remove("equation__part--mystery");
+    els.eqRight.classList.remove("equation__part--mystery");
     els.eqLeft.textContent = String(state.leftNumber);
     els.eqOp.textContent = state.challengeOp === "subtract" ? "−" : "+";
     els.eqRight.textContent = String(state.rightNumber);
     els.eqResult.textContent = "?";
-    els.hudChallenge.textContent = String(state.challengeIndex);
-    syncDifficultyHud();
+    syncMysteryChrome();
   }
 
   function clearBubbleEls() {
@@ -828,6 +1004,7 @@
   }
 
   function checkPuzzleCompleteAuto() {
+    if (state.playMode === "mystery") return;
     if (els.screenGame.hidden) return;
     if (!els.modal.hidden || !els.mergeModal.hidden) return;
     if (state.bubbles.length !== 1) return;
@@ -838,6 +1015,9 @@
 
   /** Reto de suma: cualquier fusión suma. Resta: solo cruce minuendo ↔ sustraendo resta; el resto suma (recomponer). */
   function mergeOpForPair(b, partner) {
+    if (state.playMode === "mystery" && state.mysteryType === "missing_minuend") {
+      return "add";
+    }
     if (state.challengeOp !== "subtract") return "add";
     const aMin = b.source === "minuend";
     const bMin = partner.source === "minuend";
@@ -900,6 +1080,65 @@
     ];
   }
 
+  function initialMysteryBubbleLayout() {
+    const t = state.mysteryType;
+    if (t === "missing_addend") {
+      return [
+        {
+          id: nextId(),
+          value: /** @type {number} */ (state.rightNumber),
+          x: 28,
+          y: 38,
+          source: /** @type {const} */ ("addend"),
+        },
+        {
+          id: nextId(),
+          value: state.expectedResult,
+          x: 72,
+          y: 38,
+          source: "addend",
+        },
+      ];
+    }
+    if (t === "missing_subtrahend") {
+      return [
+        {
+          id: nextId(),
+          value: /** @type {number} */ (state.leftNumber),
+          x: 28,
+          y: 38,
+          source: "minuend",
+        },
+        {
+          id: nextId(),
+          value: state.expectedResult,
+          x: 72,
+          y: 38,
+          source: "minuend",
+        },
+      ];
+    }
+    if (t === "missing_minuend") {
+      return [
+        {
+          id: nextId(),
+          value: /** @type {number} */ (state.rightNumber),
+          x: 28,
+          y: 38,
+          source: "subtrahend",
+        },
+        {
+          id: nextId(),
+          value: state.expectedResult,
+          x: 72,
+          y: 38,
+          source: "minuend",
+        },
+      ];
+    }
+    return initialBubbleLayout();
+  }
+
   function challengePrimaryLine() {
     const a = state.leftNumber;
     const b = state.rightNumber;
@@ -923,6 +1162,7 @@
   }
 
   function isFreshChallengeLayout() {
+    if (state.playMode === "mystery") return false;
     if (state.bubbles.length !== 2) return false;
     const xs = state.bubbles.map((bb) => bb.value).sort((p, q) => p - q);
     const lo = Math.min(state.leftNumber, state.rightNumber);
@@ -1043,7 +1283,43 @@
     return "Sumá piezas celestes si hace falta; restá solo cruzando minuendo (celeste) con sustraendo (rojo).";
   }
 
+  function buildMysteryHelpBannerContent() {
+    let primary = "";
+    let secondary = "";
+    if (state.mysteryType === "missing_addend") {
+      primary =
+        "Cajita + " +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        ". Encuentra la parte que falta.";
+      secondary = "Rompe el total para ver qué parte ya tenés y cuál falta.";
+    } else if (state.mysteryType === "missing_subtrahend") {
+      primary =
+        state.leftNumber +
+        " − cajita = " +
+        state.expectedResult +
+        ". Encuentra lo que se fue.";
+      secondary = "Rompe el número inicial en lo que quedó y lo que se quitó.";
+    } else if (state.mysteryType === "missing_minuend") {
+      primary =
+        "Cajita − " +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        ". Reconstruye el número inicial.";
+      secondary = "Junta lo que quedó con lo que se quitó.";
+    }
+    if (autoFusionActive) {
+      secondary = "Autofusión activa (piezas simples sin modal y puntos ×2). " + secondary;
+    }
+    return { primary, secondary: secondary.trim() };
+  }
+
   function buildHelpBannerContent() {
+    if (state.playMode === "mystery") {
+      return buildMysteryHelpBannerContent();
+    }
     const primary = challengePrimaryLine();
     const hintStats = computeMergeHintStats(state.bubbles);
     let secondary =
@@ -1098,6 +1374,9 @@
     closeMergeModalCancelled();
     clearHelpStickySecondary();
     if (state.playMode === "tutorial") {
+      state.mysteryType = null;
+      state.hiddenValue = null;
+      state.hiddenPosition = null;
       const step = getTutorialStep();
       if (!step) {
         exitTutorialCleanup();
@@ -1110,7 +1389,28 @@
       state.expectedResult =
         step.op === "add" ? step.left + step.right : step.left - step.right;
       state.challengeIndex = state.tutorialStep + 1;
+    } else if (state.playMode === "mystery") {
+      const tier = tierFromScore(state.score);
+      if (!resetIndex) {
+        state.challengeIndex += 1;
+      }
+      const ch = generateMysteryChallenge(tier, state.challengeIndex);
+      state.mysteryType = ch.mysteryType;
+      state.challengeOp = ch.challengeOp;
+      state.leftNumber = ch.leftNumber;
+      state.rightNumber = ch.rightNumber;
+      state.expectedResult = ch.expectedResult;
+      state.hiddenValue = ch.hiddenValue;
+      state.hiddenPosition = ch.hiddenPosition;
+      state.bubbles = initialMysteryBubbleLayout();
+      syncEquation();
+      syncTutorialStrip();
+      renderBubbles();
+      return;
     } else {
+      state.mysteryType = null;
+      state.hiddenValue = null;
+      state.hiddenPosition = null;
       const tier = tierFromScore(state.score);
       state.challengeOp = pickChallengeOp();
       const pair = generateChallengePair(tier, state.challengeOp);
@@ -1130,7 +1430,8 @@
   function resetTurn() {
     closeMergeModalCancelled();
     clearHelpStickySecondary();
-    state.bubbles = initialBubbleLayout();
+    state.bubbles =
+      state.playMode === "mystery" ? initialMysteryBubbleLayout() : initialBubbleLayout();
     renderBubbles();
   }
 
@@ -1230,9 +1531,124 @@
     return Math.hypot(dx, dy);
   }
 
+  function clearMysteryHelpHighlights() {
+    els.playArea.querySelectorAll(".bubble--mystery-help").forEach((n) => {
+      n.classList.remove("bubble--mystery-help");
+    });
+  }
+
+  function highlightMysteryBubbles(pred) {
+    for (const bb of state.bubbles) {
+      if (pred(bb)) {
+        const bel = els.playArea.querySelector('.bubble[data-id="' + bb.id + '"]');
+        if (bel) bel.classList.add("bubble--mystery-help");
+      }
+    }
+  }
+
+  function isPointInsideMysteryTarget(clientX, clientY) {
+    const target = els.mysteryTarget;
+    if (!target || target.hidden) return false;
+    const rect = target.getBoundingClientRect();
+    return (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    );
+  }
+
+  function showMysteryWrongFeedback(bubbleEl) {
+    let msg = "Probá otra vez.";
+    if (state.mysteryType === "missing_addend") {
+      msg = "Todavía no. Busca qué número falta para llegar al total.";
+    } else if (state.mysteryType === "missing_subtrahend") {
+      msg = "Casi. La cajita representa lo que se quitó.";
+    } else if (state.mysteryType === "missing_minuend") {
+      msg = "Recuerda: junta lo que quedó con lo que se quitó.";
+    }
+    setHelpStickySecondary(msg);
+    if (els.mysteryTarget) {
+      els.mysteryTarget.classList.remove("mystery-target--wrong");
+      void els.mysteryTarget.offsetWidth;
+      els.mysteryTarget.classList.add("mystery-target--wrong");
+    }
+    if (bubbleEl) {
+      bubbleEl.classList.remove("bubble--shake");
+      void bubbleEl.offsetWidth;
+      bubbleEl.classList.add("bubble--shake");
+    }
+  }
+
+  function mysterySuccessMessage() {
+    if (state.mysteryType === "missing_addend") {
+      return (
+        "¡Excelente! La cajita era " +
+        state.hiddenValue +
+        ". " +
+        state.hiddenValue +
+        " + " +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        "."
+      );
+    }
+    if (state.mysteryType === "missing_subtrahend") {
+      return (
+        "¡Bien! Se fueron " +
+        state.hiddenValue +
+        ". " +
+        state.leftNumber +
+        " − " +
+        state.hiddenValue +
+        " = " +
+        state.expectedResult +
+        "."
+      );
+    }
+    if (state.mysteryType === "missing_minuend") {
+      return (
+        "¡Excelente! Empezaste con " +
+        state.hiddenValue +
+        ". " +
+        state.hiddenValue +
+        " − " +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        "."
+      );
+    }
+    return "¡Excelente! Encontraste el número escondido.";
+  }
+
+  function tryPlaceOnMysteryTarget(b, bubbleEl, dragState) {
+    clearHelpStickySecondary();
+    if (state.hiddenValue != null && b.value === state.hiddenValue) {
+      removeBubbleById(b.id);
+      applyScoreDelta(pointsForOperandSum(state.hiddenValue));
+      renderBubbles();
+      if (els.mysteryTarget) {
+        els.mysteryTarget.classList.remove("mystery-target--wrong");
+        els.mysteryTarget.classList.add("mystery-target--success");
+      }
+      openSuccessModal();
+      window.setTimeout(() => {
+        if (els.mysteryTarget) els.mysteryTarget.classList.remove("mystery-target--success");
+      }, 650);
+      return;
+    }
+    b.x = dragState.origX;
+    b.y = dragState.origY;
+    if (bubbleEl) placeBubbleEl(bubbleEl, b.x, b.y);
+    showMysteryWrongFeedback(bubbleEl);
+  }
+
   function onBubblePointerDown(ev) {
     if (!els.mergeModal.hidden) return;
     clearHelpStickySecondary();
+    clearMysteryHelpHighlights();
     const el = ev.currentTarget;
     const id = el.dataset.id;
     const b = findBubble(id);
@@ -1459,6 +1875,9 @@
           ? "Completaste el último paso del tutorial."
           : "Resolviste este paso. El siguiente introduce otra idea clave.");
       els.modalNext.textContent = isLast ? "Terminar tutorial" : "Siguiente paso";
+    } else if (state.playMode === "mystery") {
+      els.modalMsg.textContent = mysterySuccessMessage() + " Llevas " + state.score + " pts.";
+      els.modalNext.textContent = "Siguiente reto";
     } else {
       els.modalMsg.textContent =
         state.leftNumber +
@@ -1569,6 +1988,12 @@
       const cx = ev.clientX - drag.grabOffset.x;
       const cy = ev.clientY - drag.grabOffset.y;
       highlightMergeCandidates(drag.id, cx, cy);
+      if (state.playMode === "mystery" && els.mysteryTarget && !els.mysteryTarget.hidden) {
+        els.mysteryTarget.classList.toggle(
+          "mystery-target--active",
+          isPointInsideMysteryTarget(ev.clientX, ev.clientY),
+        );
+      }
     }
   }
 
@@ -1579,6 +2004,9 @@
     const hadDrag = drag;
     drag = null;
     clearMergeHighlights();
+    if (els.mysteryTarget) {
+      els.mysteryTarget.classList.remove("mystery-target--active");
+    }
     if (el) {
       el.releasePointerCapture(ev.pointerId);
       el.classList.remove("bubble--dragging");
@@ -1590,6 +2018,14 @@
     }
     const cx = ev.clientX - hadDrag.grabOffset.x;
     const cy = ev.clientY - hadDrag.grabOffset.y;
+    if (
+      state.playMode === "mystery" &&
+      hadDrag.moved &&
+      isPointInsideMysteryTarget(ev.clientX, ev.clientY)
+    ) {
+      tryPlaceOnMysteryTarget(b, el, hadDrag);
+      return;
+    }
     if (tryMergeOrPlace(b, el, cx, cy, hadDrag)) {
       return;
     }
@@ -1599,6 +2035,24 @@
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerup", onPointerUp);
     document.addEventListener("pointercancel", onPointerUp);
+  }
+
+  if (els.btnMysteryHelp) {
+    els.btnMysteryHelp.addEventListener("click", () => {
+      if (state.playMode !== "mystery" || els.screenGame.hidden) return;
+      clearHelpStickySecondary();
+      clearMysteryHelpHighlights();
+      if (state.mysteryType === "missing_addend") {
+        setHelpStickySecondary("Rompe el total.");
+        highlightMysteryBubbles((bb) => bb.value === state.expectedResult);
+      } else if (state.mysteryType === "missing_subtrahend") {
+        setHelpStickySecondary("Rompe el número inicial.");
+        highlightMysteryBubbles((bb) => bb.value === state.leftNumber);
+      } else if (state.mysteryType === "missing_minuend") {
+        setHelpStickySecondary("Junta lo que quedó con lo que se quitó.");
+        highlightMysteryBubbles(() => true);
+      }
+    });
   }
 
   els.btnPlay.addEventListener("click", () => {
