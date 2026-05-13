@@ -1,0 +1,42 @@
+# Publica Bubble Math Lab en GitHub Pages (la carpeta 2/bubble-math-lab es la raíz del sitio).
+#
+# Tras el primer push: Repo → Settings → Pages → Build and deployment → Source: GitHub Actions.
+# URL típica: https://cg-sitiouno.github.io/experiments/
+
+name: Deploy Bubble Math Lab
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-bubble-math-lab
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 2/bubble-math-lab
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
