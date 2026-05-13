@@ -5,6 +5,13 @@
   const DRAG_THRESHOLD_PX = 10;
   const MAX_SUM = 99;
 
+  /** Puntos: (a+b) × este valor. Ej.: 10+5 → 15×10 = +150. Error: la mitad en penalización. */
+  const SCORE_POINTS_PER_UNIT = 10;
+
+  /** Puntuación acumulada para subir el rango de dificultad del siguiente reto. */
+  const DIFFICULTY_TIER_2_AT = 500;
+  const DIFFICULTY_TIER_3_AT = 2000;
+
   /** Enteros menores que esto no se descomponen (piezas base: 1–4 se combinan, no se rompen). */
   const MIN_DECOMPOSE = 5;
 
@@ -12,14 +19,8 @@
     "Los números del 1 al 4 no se rompen: son piezas pequeñas para sumar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
     "Combina primero los números redondos: suele ser más fácil.",
-    "Primero forma 10, luego suma lo que sobra.",
-  ];
-
-  const WRONG_MESSAGES = [
-    "Casi. Intenta combinar primero los números que hacen 10.",
-    "Todavía no. Prueba otra combinación.",
-    "Casi. Mira si puedes formar un número redondo.",
-    "Prueba combinar burbujas o descomponer una que sea " + MIN_DECOMPOSE + " o más (si se puede).",
+    "A más puntos, el juego te propone sumas con números más grandes.",
+    "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
   ];
 
   const MERGE_WRONG_HINTS = [
@@ -43,14 +44,34 @@
     return min + Math.floor(Math.random() * (max - min + 1));
   }
 
+  function pointsForOperandSum(sum) {
+    return sum * SCORE_POINTS_PER_UNIT;
+  }
+
+  function penaltyForOperandSum(sum) {
+    return Math.floor(pointsForOperandSum(sum) / 2);
+  }
+
+  function tierFromScore(score) {
+    if (score >= DIFFICULTY_TIER_3_AT) return 3;
+    if (score >= DIFFICULTY_TIER_2_AT) return 2;
+    return 1;
+  }
+
+  function difficultyLabel(tier) {
+    if (tier === 1) return "Rango inicial";
+    if (tier === 2) return "Rango medio";
+    return "Rango avanzado";
+  }
+
   /** @returns {{ a: number, b: number, sum: number }} */
-  function generatePair(level) {
+  function generatePair(tier) {
     let a;
     let b;
-    if (level === 1) {
+    if (tier === 1) {
       a = randomInt(2, 9);
       b = randomInt(2, 9);
-    } else if (level === 2) {
+    } else if (tier === 2) {
       a = randomInt(5, 19);
       b = randomInt(5, 19);
     } else {
@@ -58,7 +79,7 @@
       b = randomInt(10, 49);
     }
     if (a + b > MAX_SUM) {
-      return generatePair(level);
+      return generatePair(tier);
     }
     return { a, b, sum: a + b };
   }
@@ -84,14 +105,12 @@
   }
 
   /** @type {{
-   *   level: number,
+   *   score: number,
    *   operation: string,
    *   leftNumber: number,
    *   rightNumber: number,
    *   expectedResult: number,
    *   challengeIndex: number,
-   *   stars: number,
-   *   attempts: number,
    *   bubbles: Array<{
    *     id: string,
    *     value: number,
@@ -101,16 +120,18 @@
    *   }>,
    * }} */
   const state = {
-    level: 1,
+    score: 0,
     operation: "addition",
     leftNumber: 7,
     rightNumber: 8,
     expectedResult: 15,
     challengeIndex: 1,
-    stars: 3,
-    attempts: 0,
     bubbles: [],
   };
+
+  /** Valor mostrado en el HUD durante la animación del contador. */
+  let scoreShown = 0;
+  let scoreAnimId = 0;
 
   let drag = null;
   let helpIndex = 0;
@@ -127,20 +148,18 @@
   const els = {
     screenStart: document.getElementById("screen-start"),
     screenGame: document.getElementById("screen-game"),
-    levelSelect: document.getElementById("level-select"),
     btnPlay: document.getElementById("btn-play"),
     btnHome: document.getElementById("btn-home"),
     btnReset: document.getElementById("btn-reset-turn"),
     btnNew: document.getElementById("btn-new-challenge"),
-    hudLevel: document.getElementById("hud-level"),
+    hudScore: document.getElementById("hud-score"),
     hudChallenge: document.getElementById("hud-challenge"),
-    hudStars: document.getElementById("hud-stars"),
+    hudDifficulty: document.getElementById("hud-difficulty"),
     eqLeft: document.getElementById("eq-left"),
     eqRight: document.getElementById("eq-right"),
     eqResult: document.getElementById("eq-result-label"),
     helpBanner: document.getElementById("help-banner"),
     playArea: document.getElementById("play-area"),
-    resultZone: document.getElementById("result-zone"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
@@ -153,15 +172,62 @@
     confetti: document.getElementById("confetti-root"),
   };
 
+  function syncDifficultyHud() {
+    const tier = tierFromScore(state.score);
+    els.hudDifficulty.textContent = difficultyLabel(tier);
+  }
+
+  function flashHudScoreClass(isGain) {
+    els.hudScore.classList.remove("hud-score--gain", "hud-score--loss");
+    void els.hudScore.offsetWidth;
+    els.hudScore.classList.add(isGain ? "hud-score--gain" : "hud-score--loss");
+    window.setTimeout(() => {
+      els.hudScore.classList.remove("hud-score--gain", "hud-score--loss");
+    }, 450);
+  }
+
+  function runScoreAnimationTo(target) {
+    cancelAnimationFrame(scoreAnimId);
+    const from = scoreShown;
+    if (prefersReducedMotion() || from === target) {
+      scoreShown = target;
+      els.hudScore.textContent = String(scoreShown);
+      syncDifficultyHud();
+      return;
+    }
+    const startTime = performance.now();
+    const dur = Math.min(950, 260 + Math.min(560, Math.abs(target - from) * 3.2));
+    function tick(now) {
+      const t = Math.min(1, (now - startTime) / dur);
+      const e = 1 - Math.pow(1 - t, 3);
+      scoreShown = Math.round(from + (target - from) * e);
+      els.hudScore.textContent = String(scoreShown);
+      if (t < 1) {
+        scoreAnimId = requestAnimationFrame(tick);
+      } else {
+        scoreShown = target;
+        els.hudScore.textContent = String(scoreShown);
+        syncDifficultyHud();
+      }
+    }
+    scoreAnimId = requestAnimationFrame(tick);
+    syncDifficultyHud();
+  }
+
+  function applyScoreDelta(delta) {
+    const was = state.score;
+    state.score = Math.max(0, state.score + delta);
+    flashHudScoreClass(delta >= 0);
+    runScoreAnimationTo(state.score);
+    if (delta < 0 && was > 0 && state.score === 0) {
+      setHelp("Tus puntos no bajan de cero. ¡Seguí intentando!");
+    }
+  }
+
   function showScreen(name) {
     const isStart = name === "start";
     els.screenStart.hidden = !isStart;
     els.screenGame.hidden = isStart;
-  }
-
-  function setHudStars() {
-    const n = Math.max(0, Math.min(3, state.stars));
-    els.hudStars.textContent = "★".repeat(n) + "☆".repeat(3 - n);
   }
 
   function setHelp(text) {
@@ -177,9 +243,8 @@
     els.eqLeft.textContent = String(state.leftNumber);
     els.eqRight.textContent = String(state.rightNumber);
     els.eqResult.textContent = "?";
-    els.hudLevel.textContent = String(state.level);
     els.hudChallenge.textContent = String(state.challengeIndex);
-    setHudStars();
+    syncDifficultyHud();
   }
 
   function clearBubbleEls() {
@@ -219,6 +284,16 @@
     for (const b of state.bubbles) {
       createBubbleEl(b);
     }
+    checkPuzzleCompleteAuto();
+  }
+
+  function checkPuzzleCompleteAuto() {
+    if (els.screenGame.hidden) return;
+    if (!els.modal.hidden || !els.mergeModal.hidden) return;
+    if (state.bubbles.length !== 1) return;
+    if (state.bubbles[0].value !== state.expectedResult) return;
+    applyScoreDelta(pointsForOperandSum(state.expectedResult));
+    openSuccessModal();
   }
 
   function initialBubbleLayout() {
@@ -242,15 +317,14 @@
 
   function startChallenge(resetIndex) {
     closeMergeModalCancelled();
-    const pair = generatePair(state.level);
+    const tier = tierFromScore(state.score);
+    const pair = generatePair(tier);
     state.leftNumber = pair.a;
     state.rightNumber = pair.b;
     state.expectedResult = pair.sum;
     if (!resetIndex) {
       state.challengeIndex += 1;
     }
-    state.attempts = 0;
-    state.stars = 3;
     state.bubbles = initialBubbleLayout();
     syncEquation();
     renderBubbles();
@@ -260,7 +334,6 @@
   function resetTurn() {
     closeMergeModalCancelled();
     state.bubbles = initialBubbleLayout();
-    state.attempts = 0;
     renderBubbles();
     setHelp("Turno reiniciado. " + HELP_MESSAGES[0]);
   }
@@ -430,8 +503,15 @@
       ny,
     };
     els.mergePrompt.textContent = b.value + " + " + partner.value;
+    const sm = b.value + partner.value;
+    const gain = pointsForOperandSum(sm);
+    const pen = penaltyForOperandSum(sm);
     els.mergeHint.textContent =
-      "Escribe cuánto es esta suma. Si aciertas, las burbujas se fusionarán con un festejo.";
+      "Escribí el resultado. Si acertás: +" +
+      gain +
+      " pts. Si fallás: −" +
+      pen +
+      " pts (el puntaje no baja de 0).";
     els.mergeAnswer.value = "";
     els.mergeFeedback.hidden = true;
     els.mergeFeedback.textContent = "";
@@ -462,6 +542,7 @@
     if (!pendingMerge) return;
     const pm = pendingMerge;
     pendingMerge = null;
+    applyScoreDelta(pointsForOperandSum(pm.sum));
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
     state.bubbles.push({
@@ -524,43 +605,6 @@
     return false;
   }
 
-  function resultZoneRect() {
-    return els.resultZone.getBoundingClientRect();
-  }
-
-  function pointInResultZone(clientX, clientY) {
-    const z = resultZoneRect();
-    const pad = 14;
-    return (
-      clientX >= z.left - pad &&
-      clientX <= z.right + pad &&
-      clientY >= z.top - pad &&
-      clientY <= z.bottom + pad
-    );
-  }
-
-  function tryResultDrop(b, clientX, clientY) {
-    if (!els.mergeModal.hidden) return false;
-    if (!pointInResultZone(clientX, clientY)) return false;
-    if (b.value === state.expectedResult) {
-      openSuccessModal();
-      return true;
-    }
-    state.attempts += 1;
-    if (state.stars > 0) state.stars -= 1;
-    setHudStars();
-    const msg = WRONG_MESSAGES[(state.attempts - 1) % WRONG_MESSAGES.length];
-    setHelp(msg);
-    const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
-    if (el) {
-      el.classList.remove("bubble--shake");
-      void el.offsetWidth;
-      el.classList.add("bubble--shake");
-    }
-    if (state.attempts % 2 === 0) rotateHelp();
-    return true;
-  }
-
   function spawnConfetti() {
     els.confetti.innerHTML = "";
     const colors = ["#7cffdf", "#c084fc", "#fde047", "#f472b6", "#38bdf8"];
@@ -582,8 +626,15 @@
   function openSuccessModal() {
     closeMergeModalCancelled();
     els.modalMsg.textContent =
-      state.leftNumber + " + " + state.rightNumber + " = " + state.expectedResult + ". " +
-      "Usaste descomposición y fusión para llegar al resultado.";
+      state.leftNumber +
+      " + " +
+      state.rightNumber +
+      " = " +
+      state.expectedResult +
+      ". Usaste descomposición y fusión para llegar al resultado. " +
+      "Llevás " +
+      state.score +
+      " pts.";
     els.modal.hidden = false;
     els.modal.setAttribute("aria-hidden", "false");
     spawnConfetti();
@@ -681,7 +732,6 @@
       const cx = ev.clientX - drag.grabOffset.x;
       const cy = ev.clientY - drag.grabOffset.y;
       highlightMergeCandidates(drag.id, cx, cy);
-      els.resultZone.classList.toggle("result-zone--hover", pointInResultZone(cx, cy));
     }
   }
 
@@ -691,7 +741,6 @@
     const b = findBubble(drag.id);
     const hadDrag = drag;
     drag = null;
-    els.resultZone.classList.remove("result-zone--hover");
     clearMergeHighlights();
     if (el) {
       el.releasePointerCapture(ev.pointerId);
@@ -707,16 +756,6 @@
     if (tryMergeOrPlace(b, el, cx, cy)) {
       return;
     }
-    if (tryResultDrop(b, cx, cy)) {
-      if (b.value !== state.expectedResult) {
-        const still = findBubble(b.id);
-        if (still) {
-          still.x = hadDrag.origX;
-          still.y = hadDrag.origY;
-          renderBubbles();
-        }
-      }
-    }
   }
 
   function bindGlobalPointer() {
@@ -726,7 +765,10 @@
   }
 
   els.btnPlay.addEventListener("click", () => {
-    state.level = parseInt(els.levelSelect.value, 10) || 1;
+    cancelAnimationFrame(scoreAnimId);
+    state.score = 0;
+    scoreShown = 0;
+    els.hudScore.textContent = "0";
     state.challengeIndex = 0;
     showScreen("game");
     startChallenge(false);
@@ -766,6 +808,7 @@
       return;
     }
     if (n !== pendingMerge.sum) {
+      applyScoreDelta(-penaltyForOperandSum(pendingMerge.sum));
       els.mergeFeedback.textContent = MERGE_WRONG_HINTS[mergeWrongIndex % MERGE_WRONG_HINTS.length];
       mergeWrongIndex += 1;
       els.mergeFeedback.hidden = false;

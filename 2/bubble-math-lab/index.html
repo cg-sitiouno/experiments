@@ -21,15 +21,11 @@
             Rompe las burbujas, combínalas y descubre el resultado. No se trata de adivinar:
             se trata de transformar los números hasta que la suma sea fácil.
           </p>
-          <label class="field">
-            <span class="field__label">Nivel</span>
-            <select id="level-select" class="select" aria-describedby="level-help">
-              <option value="1">Nivel 1 — Sumas con piezas pequeñas (2–9)</option>
-              <option value="2">Nivel 2 — Hasta 20 (5–19)</option>
-              <option value="3">Nivel 3 — Mayores números (10–49)</option>
-            </select>
-          </label>
-          <p id="level-help" class="hint">Puedes cambiar el nivel en cualquier momento al volver al inicio.</p>
+          <p class="hint hint--start">
+            Ganas puntos por cada suma que aciertes al unir burbujas y por completar el reto. Si te equivocas,
+            pierdes la mitad de lo que habrías ganado con esa operación. A más puntos, los números del reto se vuelven
+            más desafiantes.
+          </p>
           <button type="button" id="btn-play" class="btn btn--primary">Jugar</button>
         </div>
       </section>
@@ -37,13 +33,15 @@
       <section id="screen-game" class="screen" aria-label="Juego" hidden>
         <header class="game-header">
           <div class="game-header__cell">
-            <span class="pill">Nivel <strong id="hud-level">1</strong></span>
+            <span class="pill pill--score"
+              >Puntos <strong id="hud-score" class="hud-score" aria-live="polite">0</strong></span
+            >
           </div>
           <div class="game-header__cell game-header__cell--center">
             <span class="pill">Reto <strong id="hud-challenge">1</strong></span>
           </div>
           <div class="game-header__cell game-header__cell--right">
-            <span id="hud-stars" class="stars" aria-label="Estrellas">★★★</span>
+            <span class="pill pill--tier" id="hud-difficulty">Rango inicial</span>
           </div>
         </header>
 
@@ -61,13 +59,8 @@
           id="play-area"
           class="play-area"
           role="application"
-          aria-label="Área de burbujas. Arrastra para fusionar; clic para descomponer."
-        >
-          <div id="result-zone" class="result-zone" data-drop-target="result">
-            <span class="result-zone__label">Arrastra aquí tu resultado</span>
-            <span class="result-zone__q" aria-hidden="true">?</span>
-          </div>
-        </div>
+          aria-label="Área de burbujas. Arrastra para fusionar; clic para descomponer. Cuando quede una sola burbuja con el resultado, ganas el reto."
+        ></div>
 
         <footer class="game-footer">
           <button type="button" id="btn-reset-turn" class="btn btn--ghost">Reiniciar turno</button>
@@ -87,7 +80,7 @@
     >
       <div class="modal__backdrop" data-close-modal></div>
       <div class="modal__card">
-        <h2 id="modal-success-title" class="modal__title">¡Excelente!</h2>
+        <h2 id="modal-success-title" class="modal__title">¡Reto completado!</h2>
         <p id="modal-success-msg" class="modal__text"></p>
         <button type="button" id="modal-next" class="btn btn--primary">Siguiente reto</button>
       </div>
