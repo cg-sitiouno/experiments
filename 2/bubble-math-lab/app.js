@@ -196,11 +196,11 @@
   }
 
   /**
-   * Reglas pedagógicas del spec + reglas de producto.
+   * Reglas pedagógicas clásicas (sin mirar el tablero).
    * @param {number} n
    * @returns {[number, number] | null}
    */
-  function decomposeParts(n) {
+  function decomposePartsClassic(n) {
     if (!Number.isFinite(n) || n < MIN_DECOMPOSE) return null;
     if (n === 5) return null;
     if (n <= 9) return [5, n - 5];
@@ -213,6 +213,121 @@
     const ones = n % 10;
     if (ones === 0) return null;
     return [tens, ones];
+  }
+
+  /**
+   * Parte n en g + (n−g) con g = 10 − v para algún v en otherValues (complemento a 10),
+   * eligiendo el split que deja menor resto (menos trabajo después del primer 10) y
+   * desempatando con v mayor. Solo v en 1…9 tienen sentido como “amigos”.
+   * @param {number} n
+   * @param {number[]} otherValues valores de otras burbujas (mismo bando)
+   * @returns {[number, number] | null}
+   */
+  function pickComplementTenSplit(n, otherValues) {
+    if (!Number.isFinite(n) || n < 2 || !otherValues || otherValues.length === 0) return null;
+    let bestPair = /** @type {null | [number, number]} */ (null);
+    let bestLeftover = Infinity;
+    let bestV = -1;
+    const seen = new Set();
+    for (const v of otherValues) {
+      if (!Number.isFinite(v) || v < 1 || v > 9) continue;
+      const key = v;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const g = 10 - v;
+      if (g < 1 || g > n - 1) continue;
+      const leftover = n - g;
+      if (leftover < 1) continue;
+      if (leftover < bestLeftover || (leftover === bestLeftover && v > bestV)) {
+        bestLeftover = leftover;
+        bestV = v;
+        const a = Math.min(g, leftover);
+        const b = Math.max(g, leftover);
+        bestPair = [a, b];
+      }
+    }
+    return bestPair;
+  }
+
+  /**
+   * Decena “completa” alineada al valor posicional + unidades: 26 → 20+6, 157 → 150+7.
+   * Prioridad pedagógica por encima de complementos a 10 y de 10+(n−10) contextual.
+   * No aplica a n ≤ 10 ni a múltiplos exactos de 10 (siguen otras reglas).
+   * @param {number} n
+   * @returns {[number, number] | null}
+   */
+  function pickDecadePlusUnits(n) {
+    if (!Number.isFinite(n) || n <= 10 || n % 10 === 0) return null;
+    const tens = Math.floor(n / 10) * 10;
+    const ones = n % 10;
+    if (ones === 0) return null;
+    return [tens, ones];
+  }
+
+  /**
+   * Si ya hay un múltiplo de 10 entre las otras piezas (mismo bando), priorizar n → 10 + (n−10).
+   * Evita casos como 15 → 12 + 3 por complemento cuando en mesa hay 10 y 7 (más intuitivo 10 + 5).
+   * @param {number} n
+   * @param {number[]} otherValues
+   * @returns {[number, number] | null}
+   *
+   * Mejora futura: hacer el orden de heurísticas configurable (perfil pedagógico / modo docente);
+   * ver §8 en plan-tareas-y-documentacion.md.
+   */
+  function pickTenPlusWhenMultipleOfTenOnBoard(n, otherValues) {
+    if (!Number.isFinite(n) || n <= 10 || !otherValues || otherValues.length === 0) return null;
+    let hasMultipleOfTen = false;
+    for (const v of otherValues) {
+      if (Number.isFinite(v) && v > 0 && v % 10 === 0) {
+        hasMultipleOfTen = true;
+        break;
+      }
+    }
+    if (!hasMultipleOfTen) return null;
+    const rest = n - 10;
+    if (rest < 1) return null;
+    const lo = Math.min(10, rest);
+    const hi = Math.max(10, rest);
+    return [lo, hi];
+  }
+
+  /**
+   * Descomposición contextual (orden fijo de heurísticas; futuro: modos configurables):
+   * 1) n > 10 y no múltiplo de 10 → ⌊n/10⌋×10 + (n mod 10) (p. ej. 26 → 20+6)
+   * 2) Con otra pieza múltiplo de 10 en mesa → 10 + (n−10)
+   * 3) Complemento a 10 con otra pieza
+   * 4) Reglas clásicas
+   * @param {{ id: string, value: number, source: string }} b
+   * @returns {[number, number] | null}
+   */
+  function decomposePartsForBubble(b) {
+    const n = b.value;
+    const decadeUnits = pickDecadePlusUnits(n);
+    if (decadeUnits) return decadeUnits;
+
+    const others = [];
+    if (state.challengeOp === "add") {
+      for (const o of state.bubbles) {
+        if (o.id === b.id) continue;
+        if (o.source !== "addend") continue;
+        others.push(o.value);
+      }
+    } else if (b.source === "minuend") {
+      for (const o of state.bubbles) {
+        if (o.id === b.id) continue;
+        if (o.source !== "minuend") continue;
+        others.push(o.value);
+      }
+    }
+    const canFriend =
+      state.challengeOp === "add" || (state.challengeOp === "subtract" && b.source === "minuend");
+    if (canFriend && others.length > 0) {
+      const tenPlus = pickTenPlusWhenMultipleOfTenOnBoard(n, others);
+      if (tenPlus) return tenPlus;
+      const friend = pickComplementTenSplit(n, others);
+      if (friend) return friend;
+    }
+    return decomposePartsClassic(n);
   }
 
   /** @type {{
@@ -818,7 +933,7 @@
   function countDecomposableOnBoard() {
     let n = 0;
     for (const bb of state.bubbles) {
-      if (decomposeParts(bb.value)) n += 1;
+      if (decomposePartsForBubble(bb)) n += 1;
     }
     return n;
   }
@@ -829,7 +944,11 @@
     }
     const big = Math.max(a, b);
     const small = Math.min(a, b);
-    const dp = decomposeParts(big);
+    const dp =
+      pickDecadePlusUnits(big) ||
+      pickTenPlusWhenMultipleOfTenOnBoard(big, [small]) ||
+      pickComplementTenSplit(big, [small]) ||
+      decomposePartsClassic(big);
     if (dp) {
       return (
         "Probá descomponer " +
@@ -1378,7 +1497,7 @@
   }
 
   function tryDecompose(b) {
-    const parts = decomposeParts(b.value);
+    const parts = decomposePartsForBubble(b);
     if (!parts) {
       const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
       if (el) {

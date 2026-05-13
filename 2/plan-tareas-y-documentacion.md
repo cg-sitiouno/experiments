@@ -259,4 +259,10 @@ Checklist derivado del spec; debe poder marcarse al cerrar el proyecto.
 
 ---
 
+## 8. Mejoras futuras (backlog)
+
+- **Modos configurables de descomposición** (`app.js`): la prioridad entre heurísticas (hoy: **10 + resto** si hay múltiplo de 10 en mesa → **complemento a 10** → **reglas clásicas**) está fija. A futuro conviene un perfil pedagógico o pantalla de opciones (p. ej. “enfatizar decenas redondas”, “enfatizar complemento a 10”, “solo reglas del spec”), con persistencia opcional en `localStorage`, para adaptar edad/nivel sin tocar código.
+
+---
+
 *Documento generado a partir de `spec.md` para uso interno de implementación. Actualizar este archivo si el spec cambia.*
