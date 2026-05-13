@@ -25,18 +25,6 @@
   /** Suma ya dominada (modal correcto) → próxima fusión del mismo par sin preguntar. */
   const LEARNED_ADD_SUMS_KEY = "bubble-math-lab-learned-add-v1";
 
-  const HELP_MESSAGES = [
-    "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
-    "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
-    "En retos de resta, el sustraendo (a la derecha de la cuenta) lleva borde rojo brillante; si lo descompones, las piezas siguen en rojo: son las que hay que restar.",
-    "En resta solo restas al juntar una pieza del minuendo con una del sustraendo; el minuendo tiene que ser mayor o igual (sin números negativos). Si juntas dos partes del mismo lado, sumas (recompones).",
-    "Combina primero los números redondos: suele ser más fácil.",
-    "Burbuja con resplandor dorado: en la mesa hay varias decenas (10, 20…), conviene juntarlas primero. Celeste: aparece un 5 junto con piezas del 1 al 4.",
-    "A más puntos, el juego te propone operaciones con números más grandes.",
-    "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
-    "Si acertás en el modal una suma “pequeña”, la próxima vez que juntes los mismos números se fusionan solos.",
-  ];
-
   const MERGE_WRONG_HINTS = [
     "Ese no es el resultado de la operación. ¡Intenta de nuevo!",
     "Casi. Repasa con calma y escribe el número.",
@@ -231,7 +219,8 @@
   let scoreAnimId = 0;
 
   let drag = null;
-  let helpIndex = 0;
+  /** Mensaje fijo en la segunda línea (error / aviso) hasta la próxima acción en el tablero. */
+  let helpStickySecondary = null;
   /** Evita doble descomposición mientras corre la animación */
   let decomposeAnimating = false;
 
@@ -267,6 +256,8 @@
     fusionBarFill: document.getElementById("fusion-bar-fill"),
     fusionBarLabel: document.getElementById("fusion-bar-label"),
     helpBanner: document.getElementById("help-banner"),
+    helpPrimary: document.getElementById("help-primary"),
+    helpSecondary: document.getElementById("help-secondary"),
     playArea: document.getElementById("play-area"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
@@ -331,7 +322,7 @@
     flashHudScoreClass(d >= 0);
     runScoreAnimationTo(state.score);
     if (d < 0 && was > 0 && state.score === 0) {
-      setHelp("Tus puntos no bajan de cero. ¡Sigue intentando!");
+      setHelpStickySecondary("Tus puntos no bajan de cero. ¡Seguí intentando!");
     }
   }
 
@@ -339,15 +330,10 @@
     const isStart = name === "start";
     els.screenStart.hidden = !isStart;
     els.screenGame.hidden = isStart;
-  }
-
-  function setHelp(text) {
-    els.helpBanner.textContent = text;
-  }
-
-  function rotateHelp() {
-    setHelp(HELP_MESSAGES[helpIndex % HELP_MESSAGES.length]);
-    helpIndex += 1;
+    if (isStart) {
+      helpStickySecondary = null;
+      updateHelpBanner();
+    }
   }
 
   function updateFusionBarUi() {
@@ -397,7 +383,7 @@
     if (autoFusionFuel <= 0) {
       autoFusionFuel = 0;
       exitAutoFusionMode();
-      setHelp(
+      setHelpStickySecondary(
         "Modo autofusión terminado. Acierta diez veces seguidas en el modal para volver a llenar la barra."
       );
       fusionDrainRaf = 0;
@@ -423,9 +409,8 @@
     if (els.fusionBar) els.fusionBar.classList.add("fusion-bar--active");
     updateFusionBarUi();
     ensureFusionDrainLoop();
-    setHelp(
-      "¡Autofusión! Las piezas simples se fusionan solas al acercarlas. Tus puntos valen el doble. Mantén la barra fusionando y descomponiendo."
-    );
+    clearHelpStickySecondary();
+    updateHelpBanner();
   }
 
   function exitAutoFusionMode() {
@@ -537,6 +522,7 @@
   }
 
   function runMergeCore(pm) {
+    clearHelpStickySecondary();
     applyScoreDelta(pointsForOperandSum(pm.scoreBasis));
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
@@ -558,13 +544,6 @@
     });
     renderBubbles();
     spawnMergeFireworks();
-    setHelp(
-      state.challengeOp === "add"
-        ? "¡Muy bien! Sigue uniendo piezas para simplificar la suma."
-        : pm.op === "subtract"
-          ? "¡Muy bien! Cuando queden solo partes del minuendo, súmalas para llegar al resultado."
-          : "¡Muy bien! Sigue restando el sustraendo donde corresponda o sumando partes del minuendo."
-    );
     if (autoFusionActive) {
       bumpAutoFusionFuel();
     }
@@ -656,6 +635,7 @@
       createBubbleEl(b, hintStats);
     }
     checkPuzzleCompleteAuto();
+    updateHelpBanner();
   }
 
   function checkPuzzleCompleteAuto() {
@@ -698,8 +678,8 @@
   }
 
   function feedbackBlockedSubtraction(b, partner) {
-    setHelp(
-      "No puedes restar si la parte del minuendo es más pequeña que el sustraendo. Usa una pieza del minuendo mayor o igual al sustraendo, o suma antes partes del minuendo."
+    setHelpStickySecondary(
+      "No podés restar si la parte del minuendo es más chica que el sustraendo. Usá una pieza del minuendo mayor o igual al rojo, o sumá antes partes del minuendo."
     );
     for (const id of [b.id, partner.id]) {
       const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
@@ -731,8 +711,199 @@
     ];
   }
 
+  function challengePrimaryLine() {
+    const a = state.leftNumber;
+    const b = state.rightNumber;
+    const t = state.expectedResult;
+    if (state.challengeOp === "add") {
+      return (
+        "Suma: " + a + " + " + b + " = " + t + ". Objetivo: una sola burbuja con " + t + "."
+      );
+    }
+    return (
+      "Resta: " +
+      a +
+      " − " +
+      b +
+      " = " +
+      t +
+      ". Objetivo: una burbuja con " +
+      t +
+      " (las rojas son el sustraendo)."
+    );
+  }
+
+  function isFreshChallengeLayout() {
+    if (state.bubbles.length !== 2) return false;
+    const xs = state.bubbles.map((bb) => bb.value).sort((p, q) => p - q);
+    const lo = Math.min(state.leftNumber, state.rightNumber);
+    const hi = Math.max(state.leftNumber, state.rightNumber);
+    return xs[0] === lo && xs[1] === hi;
+  }
+
+  function countDecomposableOnBoard() {
+    let n = 0;
+    for (const bb of state.bubbles) {
+      if (decomposeParts(bb.value)) n += 1;
+    }
+    return n;
+  }
+
+  function suggestForSumPair(a, b) {
+    if (a % 10 === 0 || b % 10 === 0) {
+      return "Empezá por el número redondo o descomponé el otro en decenas y unidades.";
+    }
+    const big = Math.max(a, b);
+    const small = Math.min(a, b);
+    const dp = decomposeParts(big);
+    if (dp) {
+      return (
+        "Probá descomponer " +
+        big +
+        " en " +
+        dp[0] +
+        " + " +
+        dp[1] +
+        " para sumar paso a paso con " +
+        small +
+        "."
+      );
+    }
+    return "Tocá una burbuja para descomponer o arrastrá para acercarlas y sumar.";
+  }
+
+  function buildSecondaryAddition(hintStats) {
+    const a = state.leftNumber;
+    const b = state.rightNumber;
+    const target = state.expectedResult;
+
+    if (hintStats.multiTens) {
+      return "En la mesa hay varias decenas: sumá primero esas piezas (resplandor dorado).";
+    }
+    if (hintStats.fiveAndSmall) {
+      return "Tenés un 5 y piezas del 1 al 4: encajan bien entre sí (resplandor celeste).";
+    }
+
+    if (state.bubbles.length === 1) {
+      const only = state.bubbles[0];
+      if (only.value !== target) {
+        return "La pieza debería ser " + target + "; fusioná o descomponé para ajustar.";
+      }
+      return "";
+    }
+
+    if (isFreshChallengeLayout()) {
+      return suggestForSumPair(a, b);
+    }
+
+    const dc = countDecomposableOnBoard();
+    if (dc >= 1 && state.bubbles.length >= 3) {
+      return (
+        "Seguí: podés descomponer una de las " +
+        dc +
+        " burbujas elegibles o fusionar dos que quieras combinar."
+      );
+    }
+
+    return "Acercá burbujas para fusionar: el total sigue representando la misma suma.";
+  }
+
+  function buildSecondarySubtraction(hintStats) {
+    const subParts = state.bubbles.filter((bb) => bb.source === "subtrahend");
+    const minParts = state.bubbles.filter((bb) => bb.source === "minuend");
+
+    if (hintStats.multiTens) {
+      return "Varias decenas en el minuendo: sumalas primero si conviene (resplandor dorado).";
+    }
+    if (hintStats.fiveAndSmall) {
+      return "En el minuendo, el 5 y las piezas 1–4 combinan bien (resplandor celeste).";
+    }
+
+    if (isFreshChallengeLayout()) {
+      return (
+        "Restá acercando rojo al minuendo cuando la pieza celeste sea ≥ al sustraendo, o descomponé para igualar cantidades."
+      );
+    }
+
+    if (subParts.length >= 2) {
+      const subVals = subParts.map((bb) => bb.value).join(", ");
+      return (
+        "Hay varias piezas rojas (" +
+        subVals +
+        "): restá cada una contra una pieza del minuendo mayor o igual."
+      );
+    }
+
+    if (subParts.length === 1 && minParts.length >= 2) {
+      const mvs = minParts.map((bb) => bb.value).join(", ");
+      return (
+        "Sustraendo " +
+        subParts[0].value +
+        ": juntalo con una pieza del minuendo ≥ " +
+        subParts[0].value +
+        ", o sumá antes partes del minuendo (" +
+        mvs +
+        ")."
+      );
+    }
+
+    return "Sumá piezas celestes si hace falta; restá solo cruzando minuendo (celeste) con sustraendo (rojo).";
+  }
+
+  function buildHelpBannerContent() {
+    const primary = challengePrimaryLine();
+    const hintStats = computeMergeHintStats(state.bubbles);
+    let secondary =
+      state.challengeOp === "add"
+        ? buildSecondaryAddition(hintStats)
+        : buildSecondarySubtraction(hintStats);
+
+    if (autoFusionActive) {
+      secondary = "Autofusión activa (piezas simples sin modal y puntos ×2). " + secondary;
+    }
+
+    return { primary, secondary: secondary.trim() };
+  }
+
+  function setHelpStickySecondary(text) {
+    helpStickySecondary = text;
+    updateHelpBanner();
+  }
+
+  function clearHelpStickySecondary() {
+    if (helpStickySecondary === null) return;
+    helpStickySecondary = null;
+    updateHelpBanner();
+  }
+
+  function updateHelpBanner() {
+    if (!els.helpPrimary) return;
+    if (els.screenGame.hidden) {
+      els.helpPrimary.textContent = "";
+      if (els.helpSecondary) {
+        els.helpSecondary.textContent = "";
+        els.helpSecondary.hidden = true;
+      }
+      return;
+    }
+    const { primary, secondary } = buildHelpBannerContent();
+    els.helpPrimary.textContent = primary;
+    if (helpStickySecondary) {
+      els.helpSecondary.textContent = helpStickySecondary;
+      els.helpSecondary.hidden = false;
+      els.helpSecondary.classList.remove("help-banner__secondary--muted");
+      els.helpSecondary.classList.add("help-banner__secondary--alert");
+    } else {
+      els.helpSecondary.textContent = secondary;
+      els.helpSecondary.hidden = secondary.length === 0;
+      els.helpSecondary.classList.add("help-banner__secondary--muted");
+      els.helpSecondary.classList.remove("help-banner__secondary--alert");
+    }
+  }
+
   function startChallenge(resetIndex) {
     closeMergeModalCancelled();
+    clearHelpStickySecondary();
     const tier = tierFromScore(state.score);
     state.challengeOp = pickChallengeOp();
     const pair = generateChallengePair(tier, state.challengeOp);
@@ -745,14 +916,13 @@
     state.bubbles = initialBubbleLayout();
     syncEquation();
     renderBubbles();
-    rotateHelp();
   }
 
   function resetTurn() {
     closeMergeModalCancelled();
+    clearHelpStickySecondary();
     state.bubbles = initialBubbleLayout();
     renderBubbles();
-    setHelp("Turno reiniciado. " + HELP_MESSAGES[0]);
   }
 
   function newChallengeFromMenu() {
@@ -832,7 +1002,6 @@
       applyEmergeFromSplit(ox, oy, [id1, id2]);
     }
     decomposeAnimating = false;
-    setHelp("Bien. Ahora acerca las burbujas que quieras fusionar.");
     if (autoFusionActive) {
       bumpAutoFusionFuel();
       ensureFusionDrainLoop();
@@ -853,6 +1022,7 @@
 
   function onBubblePointerDown(ev) {
     if (!els.mergeModal.hidden) return;
+    clearHelpStickySecondary();
     const el = ev.currentTarget;
     const id = el.dataset.id;
     const b = findBubble(id);
@@ -1109,7 +1279,7 @@
         void el.offsetWidth;
         el.classList.add("bubble--shake");
       }
-      setHelp(decomposeBlockedMessage(b.value));
+      setHelpStickySecondary(decomposeBlockedMessage(b.value));
       return;
     }
 
@@ -1278,13 +1448,7 @@
     });
   });
 
-  window.setInterval(() => {
-    if (!els.screenGame.hidden && els.modal.hidden && els.mergeModal.hidden) {
-      rotateHelp();
-    }
-  }, 12000);
-
   bindGlobalPointer();
-  setHelp(HELP_MESSAGES[0]);
+  updateHelpBanner();
   updateFusionBarUi();
 })();
