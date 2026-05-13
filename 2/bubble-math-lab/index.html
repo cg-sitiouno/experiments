@@ -39,12 +39,29 @@
               <input type="radio" name="play-mode" value="mixed" />
               Mixto (sumas y restas)
             </label>
+            <label class="mode-options__choice mode-options__choice--tutorial">
+              <input type="radio" name="play-mode" value="tutorial" />
+              Tutorial (aprender jugando, 3 pasos)
+            </label>
           </fieldset>
           <button type="button" id="btn-play" class="btn btn--primary">Comenzar</button>
         </div>
       </section>
 
       <section id="screen-game" class="screen" aria-label="Juego" hidden>
+        <div
+          id="tutorial-strip"
+          class="tutorial-strip"
+          role="region"
+          aria-label="Instrucciones del tutorial"
+          hidden
+        >
+          <p class="tutorial-strip__title" id="tutorial-strip-title"></p>
+          <p class="tutorial-strip__body" id="tutorial-strip-body"></p>
+          <button type="button" id="btn-tutorial-skip" class="btn btn--ghost tutorial-strip__skip">
+            Saltar tutorial
+          </button>
+        </div>
         <header class="game-header">
           <div class="game-header__cell">
             <span class="pill pill--score"

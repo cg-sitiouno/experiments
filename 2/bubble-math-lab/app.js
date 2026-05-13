@@ -31,6 +31,34 @@
     "Revisa las dos burbujas y la operación del reto. Puedes intentarlo otra vez.",
   ];
 
+  /** Retos fijos del modo tutorial (orden pedagógico). */
+  const TUTORIAL_SEQUENCE = [
+    {
+      op: "add",
+      left: 7,
+      right: 8,
+      title: "Paso 1 de 3 — Suma y burbujas",
+      body:
+        "Arriba está la cuenta que hay que resolver. Tocá el 7 u el 8 (sin arrastrar) para partirlo en dos piezas más chicas. Después arrastrá una burbuja sobre otra: se suman y el juego te pedirá el resultado en un cuadro. Objetivo: quedar con una sola burbuja que muestre 15.",
+    },
+    {
+      op: "add",
+      left: 10,
+      right: 6,
+      title: "Paso 2 de 3 — Decenas",
+      body:
+        "10 + 6 = 16. Los múltiplos de 10 suelen ser buen punto de partida: podés fusionarlos primero o descomponer el otro número para sumar por partes. Objetivo: una burbuja con 16.",
+    },
+    {
+      op: "subtract",
+      left: 14,
+      right: 6,
+      title: "Paso 3 de 3 — Resta",
+      body:
+        "14 − 6 = 8. Las burbujas rojas son el sustraendo: arrástralas sobre una celeste del minuendo cuando la celeste sea mayor o igual. Si juntás dos celestes, las volvés a sumar. Objetivo: una burbuja con 8.",
+    },
+  ];
+
   let mergeWrongIndex = 0;
 
   let idCounter = 0;
@@ -189,7 +217,8 @@
 
   /** @type {{
    *   score: number,
-   *   playMode: 'add_only' | 'sub_only' | 'mixed',
+   *   playMode: 'add_only' | 'sub_only' | 'mixed' | 'tutorial',
+   *   tutorialStep: number,
    *   challengeOp: 'add' | 'subtract',
    *   leftNumber: number,
    *   rightNumber: number,
@@ -206,6 +235,7 @@
   const state = {
     score: 0,
     playMode: "add_only",
+    tutorialStep: 0,
     challengeOp: "add",
     leftNumber: 7,
     rightNumber: 8,
@@ -258,6 +288,10 @@
     helpBanner: document.getElementById("help-banner"),
     helpPrimary: document.getElementById("help-primary"),
     helpSecondary: document.getElementById("help-secondary"),
+    tutorialStrip: document.getElementById("tutorial-strip"),
+    tutorialTitle: document.getElementById("tutorial-strip-title"),
+    tutorialBody: document.getElementById("tutorial-strip-body"),
+    tutorialSkip: document.getElementById("btn-tutorial-skip"),
     playArea: document.getElementById("play-area"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
@@ -273,6 +307,10 @@
   };
 
   function syncDifficultyHud() {
+    if (state.playMode === "tutorial") {
+      els.hudDifficulty.textContent = "Tutorial";
+      return;
+    }
     const tier = tierFromScore(state.score);
     els.hudDifficulty.textContent = difficultyLabel(tier);
   }
@@ -546,6 +584,42 @@
     spawnMergeFireworks();
     if (autoFusionActive) {
       bumpAutoFusionFuel();
+    }
+  }
+
+  function getTutorialStep() {
+    return TUTORIAL_SEQUENCE[state.tutorialStep] || null;
+  }
+
+  function syncTutorialStrip() {
+    if (!els.tutorialStrip) return;
+    if (state.playMode !== "tutorial") {
+      els.tutorialStrip.hidden = true;
+      return;
+    }
+    const step = getTutorialStep();
+    if (!step) {
+      els.tutorialStrip.hidden = true;
+      return;
+    }
+    els.tutorialStrip.hidden = false;
+    els.tutorialTitle.textContent = step.title;
+    els.tutorialBody.textContent = step.body;
+  }
+
+  function applyTutorialScreenClass() {
+    if (!els.screenGame) return;
+    els.screenGame.classList.toggle("screen--tutorial", state.playMode === "tutorial");
+  }
+
+  function exitTutorialCleanup() {
+    state.playMode = "add_only";
+    state.tutorialStep = 0;
+    applyTutorialScreenClass();
+    syncTutorialStrip();
+    const addRadio = document.querySelector('input[name="play-mode"][value="add_only"]');
+    if (addRadio) {
+      addRadio.checked = true;
     }
   }
 
@@ -904,17 +978,33 @@
   function startChallenge(resetIndex) {
     closeMergeModalCancelled();
     clearHelpStickySecondary();
-    const tier = tierFromScore(state.score);
-    state.challengeOp = pickChallengeOp();
-    const pair = generateChallengePair(tier, state.challengeOp);
-    state.leftNumber = pair.a;
-    state.rightNumber = pair.b;
-    state.expectedResult = pair.sum;
-    if (!resetIndex) {
-      state.challengeIndex += 1;
+    if (state.playMode === "tutorial") {
+      const step = getTutorialStep();
+      if (!step) {
+        exitTutorialCleanup();
+        showScreen("start");
+        return;
+      }
+      state.challengeOp = step.op;
+      state.leftNumber = step.left;
+      state.rightNumber = step.right;
+      state.expectedResult =
+        step.op === "add" ? step.left + step.right : step.left - step.right;
+      state.challengeIndex = state.tutorialStep + 1;
+    } else {
+      const tier = tierFromScore(state.score);
+      state.challengeOp = pickChallengeOp();
+      const pair = generateChallengePair(tier, state.challengeOp);
+      state.leftNumber = pair.a;
+      state.rightNumber = pair.b;
+      state.expectedResult = pair.sum;
+      if (!resetIndex) {
+        state.challengeIndex += 1;
+      }
     }
     state.bubbles = initialBubbleLayout();
     syncEquation();
+    syncTutorialStrip();
     renderBubbles();
   }
 
@@ -926,6 +1016,7 @@
   }
 
   function newChallengeFromMenu() {
+    if (state.playMode === "tutorial") return;
     startChallenge(false);
   }
 
@@ -1236,16 +1327,32 @@
   function openSuccessModal() {
     closeMergeModalCancelled();
     const opLabel = state.challengeOp === "subtract" ? " − " : " + ";
-    els.modalMsg.textContent =
-      state.leftNumber +
-      opLabel +
-      state.rightNumber +
-      " = " +
-      state.expectedResult +
-      ". Usaste descomposición y fusión para llegar al resultado. " +
-      "Llevas " +
-      state.score +
-      " pts.";
+    if (state.playMode === "tutorial") {
+      const isLast = state.tutorialStep >= TUTORIAL_SEQUENCE.length - 1;
+      els.modalMsg.textContent =
+        state.leftNumber +
+        opLabel +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        ". " +
+        (isLast
+          ? "Completaste el último paso del tutorial."
+          : "Resolviste este paso. El siguiente introduce otra idea clave.");
+      els.modalNext.textContent = isLast ? "Terminar tutorial" : "Siguiente paso";
+    } else {
+      els.modalMsg.textContent =
+        state.leftNumber +
+        opLabel +
+        state.rightNumber +
+        " = " +
+        state.expectedResult +
+        ". Usaste descomposición y fusión para llegar al resultado. " +
+        "Llevas " +
+        state.score +
+        " pts.";
+      els.modalNext.textContent = "Siguiente reto";
+    }
     els.modal.hidden = false;
     els.modal.setAttribute("aria-hidden", "false");
     spawnConfetti();
@@ -1378,6 +1485,7 @@
   els.btnPlay.addEventListener("click", () => {
     const sel = document.querySelector('input[name="play-mode"]:checked');
     state.playMode = sel ? sel.value : "add_only";
+    state.tutorialStep = 0;
     cancelFusionDrainLoop();
     exitAutoFusionMode();
     consecutiveModalCorrect = 0;
@@ -1388,6 +1496,7 @@
     els.hudScore.textContent = "0";
     state.challengeIndex = 0;
     showScreen("game");
+    applyTutorialScreenClass();
     startChallenge(false);
   });
 
@@ -1398,6 +1507,9 @@
     exitAutoFusionMode();
     consecutiveModalCorrect = 0;
     updateFusionBarUi();
+    if (state.playMode === "tutorial") {
+      exitTutorialCleanup();
+    }
     showScreen("start");
   });
 
@@ -1407,6 +1519,17 @@
 
   els.modalNext.addEventListener("click", () => {
     closeSuccessModal();
+    if (state.playMode === "tutorial") {
+      if (state.tutorialStep >= TUTORIAL_SEQUENCE.length - 1) {
+        exitTutorialCleanup();
+        showScreen("start");
+        updateHelpBanner();
+        return;
+      }
+      state.tutorialStep += 1;
+      startChallenge(true);
+      return;
+    }
     newChallengeFromMenu();
   });
 
@@ -1447,6 +1570,14 @@
       closeMergeModalCancelled();
     });
   });
+
+  if (els.tutorialSkip) {
+    els.tutorialSkip.addEventListener("click", () => {
+      exitTutorialCleanup();
+      showScreen("start");
+      updateHelpBanner();
+    });
+  }
 
   bindGlobalPointer();
   updateHelpBanner();
