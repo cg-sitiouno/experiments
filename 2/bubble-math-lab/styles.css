@@ -113,37 +113,82 @@ body {
 }
 
 .mode-options {
-  margin: 0 0 1.25rem;
-  padding: 0.9rem 1rem 1rem;
-  border-radius: 1rem;
+  margin: 0 0 1.4rem;
+  padding: 1rem 1rem 1.1rem;
+  border-radius: 1.15rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(15, 23, 42, 0.35);
   text-align: left;
 }
 
 .mode-options .field__label {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.85rem;
+  font-size: 1.05rem;
 }
 
 .mode-options__choice {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 0.45rem;
-  font-size: 0.95rem;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.85rem;
+  min-height: 3.5rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
   cursor: pointer;
-  color: var(--text-muted);
+  border-radius: 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.12);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
 }
 
 .mode-options__choice:last-child {
   margin-bottom: 0;
 }
 
-.mode-options__choice input {
-  width: 1.1rem;
-  height: 1.1rem;
-  accent-color: var(--accent);
+.mode-options__choice:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-options__choice:has(input:checked) {
+  background: rgba(124, 255, 223, 0.12);
+  border-color: rgba(124, 255, 223, 0.4);
+}
+
+.mode-options__choice input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  margin: 0;
+  border-radius: 0.65rem;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  background: rgba(15, 23, 42, 0.65);
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mode-options__choice input[type="radio"]:checked {
+  border-color: var(--accent);
+  background: linear-gradient(145deg, rgba(124, 255, 223, 0.95), rgba(45, 200, 180, 0.88));
+  box-shadow:
+    inset 0 0 0 4px rgba(15, 23, 42, 0.35),
+    0 0 20px rgba(124, 255, 223, 0.38);
+}
+
+.mode-options__choice:active {
+  transform: scale(0.99);
+}
+
+.mode-options__choice input[type="radio"]:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .hint {
@@ -759,6 +804,21 @@ body {
 }
 
 @media (max-width: 600px) {
+  .mode-options__choice {
+    min-height: 3.75rem;
+    padding: 1rem 1.05rem;
+    margin-bottom: 1rem;
+    font-size: 1.12rem;
+  }
+
+  .mode-options__choice input[type="radio"] {
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 0.7rem;
+  }
+
   .bubble {
     width: 64px;
     height: 64px;

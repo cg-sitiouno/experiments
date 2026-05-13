@@ -18,17 +18,17 @@
   const HELP_MESSAGES = [
     "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
-    "En retos de resta, el sustraendo (derecha en la cuenta) lleva borde rojo brillante; si lo descomponés, las piezas siguen en rojo: son las que hay que restar.",
-    "En resta solo restás al juntar una pieza del minuendo con una del sustraendo; el minuendo tiene que ser mayor o igual (sin números negativos). Si juntás dos partes del mismo lado, sumás (recomponés).",
+    "En retos de resta, el sustraendo (a la derecha de la cuenta) lleva borde rojo brillante; si lo descompones, las piezas siguen en rojo: son las que hay que restar.",
+    "En resta solo restas al juntar una pieza del minuendo con una del sustraendo; el minuendo tiene que ser mayor o igual (sin números negativos). Si juntas dos partes del mismo lado, sumas (recompones).",
     "Combina primero los números redondos: suele ser más fácil.",
     "A más puntos, el juego te propone operaciones con números más grandes.",
     "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
   ];
 
   const MERGE_WRONG_HINTS = [
-    "Ese no es el resultado de la operación. ¡Intentá de nuevo!",
-    "Casi. Repasá con calma y escribí el número.",
-    "Revisá las dos burbujas y la operación del reto. Podés intentarlo otra vez.",
+    "Ese no es el resultado de la operación. ¡Intenta de nuevo!",
+    "Casi. Repasa con calma y escribe el número.",
+    "Revisa las dos burbujas y la operación del reto. Puedes intentarlo otra vez.",
   ];
 
   let mergeWrongIndex = 0;
@@ -257,7 +257,7 @@
     flashHudScoreClass(delta >= 0);
     runScoreAnimationTo(state.score);
     if (delta < 0 && was > 0 && state.score === 0) {
-      setHelp("Tus puntos no bajan de cero. ¡Seguí intentando!");
+      setHelp("Tus puntos no bajan de cero. ¡Sigue intentando!");
     }
   }
 
@@ -369,7 +369,7 @@
 
   function feedbackBlockedSubtraction(b, partner) {
     setHelp(
-      "No podés restar si la parte del minuendo es más chica que el sustraendo. Usá una pieza del minuendo mayor o igual al sustraendo, o sumá antes partes del minuendo."
+      "No puedes restar si la parte del minuendo es más pequeña que el sustraendo. Usa una pieza del minuendo mayor o igual al sustraendo, o suma antes partes del minuendo."
     );
     for (const id of [b.id, partner.id]) {
       const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
@@ -502,7 +502,7 @@
       applyEmergeFromSplit(ox, oy, [id1, id2]);
     }
     decomposeAnimating = false;
-    setHelp("Bien. Ahora acercá las burbujas que quieras fusionar.");
+    setHelp("Bien. Ahora acerca las burbujas que quieras fusionar.");
   }
 
   function bubbleCenterClient(b) {
@@ -628,9 +628,9 @@
     const gain = pointsForOperandSum(scoreBasis);
     const pen = penaltyForOperandSum(scoreBasis);
     els.mergeHint.textContent =
-      "Escribí el resultado. Si acertás: +" +
+      "Escribe el resultado. Si aciertas: +" +
       gain +
-      " pts. Si fallás: −" +
+      " pts. Si fallas: −" +
       pen +
       " pts (el puntaje no baja de 0).";
     els.mergeAnswer.value = "";
@@ -687,10 +687,10 @@
     spawnMergeFireworks();
     setHelp(
       state.challengeOp === "add"
-        ? "¡Muy bien! Seguí uniendo piezas para simplificar la suma."
+        ? "¡Muy bien! Sigue uniendo piezas para simplificar la suma."
         : pm.op === "subtract"
-          ? "¡Muy bien! Cuando queden solo partes del minuendo, sumá las para llegar al resultado."
-          : "¡Muy bien! Seguí restando el sustraendo donde corresponda o sumando partes del minuendo."
+          ? "¡Muy bien! Cuando queden solo partes del minuendo, súmalas para llegar al resultado."
+          : "¡Muy bien! Sigue restando el sustraendo donde corresponda o sumando partes del minuendo."
     );
   }
 
@@ -778,7 +778,7 @@
       " = " +
       state.expectedResult +
       ". Usaste descomposición y fusión para llegar al resultado. " +
-      "Llevás " +
+      "Llevas " +
       state.score +
       " pts.";
     els.modal.hidden = false;
