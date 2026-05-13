@@ -22,6 +22,9 @@
   /** Cuánto sube la energía (0–1) por actividad válida en modo autofusión. */
   const AUTO_FUSION_ACTIVITY_BUMP = 0.07;
 
+  /** Suma ya dominada (modal correcto) → próxima fusión del mismo par sin preguntar. */
+  const LEARNED_ADD_SUMS_KEY = "bubble-math-lab-learned-add-v1";
+
   const HELP_MESSAGES = [
     "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
@@ -30,6 +33,7 @@
     "Combina primero los números redondos: suele ser más fácil.",
     "A más puntos, el juego te propone operaciones con números más grandes.",
     "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
+    "Si acertás en el modal una suma “pequeña”, la próxima vez que juntes los mismos números se fusionan solos.",
   ];
 
   const MERGE_WRONG_HINTS = [
@@ -61,6 +65,47 @@
     return Math.floor(pointsForOperandSum(sum) / 2);
   }
 
+  function canonicalAddPairKey(a, b) {
+    return Math.min(a, b) + ":" + Math.max(a, b);
+  }
+
+  /**
+   * Sumas que entran al historial / fusión memorizada:
+   * - ambos sumandos entre 1 y 5, o
+   * - un múltiplo de 10 y el otro entre 1 y 10.
+   */
+  function isEasyLearnableAddPair(a, b) {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    if (a < 1 || b < 1) return false;
+    if (a <= 5 && b <= 5) return true;
+    const hi = Math.max(a, b);
+    const lo = Math.min(a, b);
+    if (hi % 10 === 0 && lo <= 10) return true;
+    return false;
+  }
+
+  function loadLearnedAddPairs() {
+    try {
+      const raw = localStorage.getItem(LEARNED_ADD_SUMS_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter((x) => typeof x === "string"));
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function persistLearnedAddPairs(set) {
+    try {
+      localStorage.setItem(LEARNED_ADD_SUMS_KEY, JSON.stringify([...set].sort()));
+    } catch (e) {
+      /* ignore quota / private mode */
+    }
+  }
+
+  const learnedAddPairs = loadLearnedAddPairs();
+
   function tierFromScore(score) {
     if (score >= DIFFICULTY_TIER_3_AT) return 3;
     if (score >= DIFFICULTY_TIER_2_AT) return 2;
@@ -78,8 +123,17 @@
     let a;
     let b;
     if (tier === 1) {
-      a = randomInt(2, 9);
-      b = randomInt(2, 9);
+      /** Al menos un sumando en 6…9 (mayor que 5 y menor que 10). */
+      let guard = 0;
+      do {
+        guard += 1;
+        a = randomInt(2, 9);
+        b = randomInt(2, 9);
+      } while ((a + b > MAX_SUM || (a < 6 && b < 6)) && guard < 80);
+      if (a + b > MAX_SUM || (a < 6 && b < 6)) {
+        a = 6;
+        b = 2;
+      }
     } else if (tier === 2) {
       a = randomInt(5, 19);
       b = randomInt(5, 19);
@@ -312,7 +366,7 @@
         consecutiveModalCorrect +
         "/" +
         AUTO_FUSION_MODAL_STREAK +
-        " aciertos seguidos (modal)";
+        " aciertos seguidos";
     }
     els.fusionBarFill.style.width = pct + "%";
     els.fusionBarLabel.textContent = label;
@@ -424,6 +478,24 @@
       return isPrimitiveSubtractPair(partner.value, b.value);
     }
     return false;
+  }
+
+  /** Fusión sin modal: par ya acertado antes y sigue siendo suma “fácil”. */
+  function isLearnedInstantAddMerge(b, partner) {
+    if (isBlockedSubtractionMerge(b, partner)) return false;
+    const pm = buildMergePayload(b, partner);
+    if (pm.op !== "add") return false;
+    if (!isEasyLearnableAddPair(pm.v1, pm.v2)) return false;
+    return learnedAddPairs.has(canonicalAddPairKey(pm.v1, pm.v2));
+  }
+
+  function rememberLearnedAddFromSuccessfulModal(pm) {
+    if (pm.op !== "add") return;
+    if (!isEasyLearnableAddPair(pm.v1, pm.v2)) return;
+    const k = canonicalAddPairKey(pm.v1, pm.v2);
+    if (learnedAddPairs.has(k)) return;
+    learnedAddPairs.add(k);
+    persistLearnedAddPairs(learnedAddPairs);
   }
 
   function buildMergePayload(b, partner) {
@@ -865,6 +937,7 @@
     const pm = pendingMerge;
     pendingMerge = null;
     hideMergeModalUI();
+    rememberLearnedAddFromSuccessfulModal(pm);
     runMergeCore(pm);
     onSuccessfulModalMerge();
   }
@@ -920,6 +993,11 @@
         return true;
       }
       if (isPrimitiveAutoFuseMerge(b, partner)) {
+        const pm = buildMergePayload(b, partner);
+        runMergeCore(pm);
+        return true;
+      }
+      if (isLearnedInstantAddMerge(b, partner)) {
         const pm = buildMergePayload(b, partner);
         runMergeCore(pm);
         return true;
