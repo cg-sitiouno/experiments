@@ -16,17 +16,18 @@
   const MIN_DECOMPOSE = 5;
 
   const HELP_MESSAGES = [
-    "Los números del 1 al 4 no se rompen: son piezas pequeñas para sumar.",
+    "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
+    "En restas, cada fusión resta la burbuja más chica a la más grande: pensá el orden antes de romper el minuendo.",
     "Combina primero los números redondos: suele ser más fácil.",
-    "A más puntos, el juego te propone sumas con números más grandes.",
+    "A más puntos, el juego te propone operaciones con números más grandes.",
     "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
   ];
 
   const MERGE_WRONG_HINTS = [
-    "Ese no es el resultado de esta suma. ¡Inténtalo de nuevo!",
-    "Casi. Sumá otra vez con calma y escribe el número.",
-    "Revisa si sumaste bien las dos burbujas. Puedes intentarlo otra vez.",
+    "Ese no es el resultado de la operación. ¡Intentá de nuevo!",
+    "Casi. Repasá con calma y escribí el número.",
+    "Revisá las dos burbujas y la operación del reto. Podés intentarlo otra vez.",
   ];
 
   let mergeWrongIndex = 0;
@@ -65,7 +66,7 @@
   }
 
   /** @returns {{ a: number, b: number, sum: number }} */
-  function generatePair(tier) {
+  function generateAdditionPair(tier) {
     let a;
     let b;
     if (tier === 1) {
@@ -79,9 +80,40 @@
       b = randomInt(10, 49);
     }
     if (a + b > MAX_SUM) {
-      return generatePair(tier);
+      return generateAdditionPair(tier);
     }
     return { a, b, sum: a + b };
+  }
+
+  /** Minuendo a, sustraendo b, resultado a − b (siempre a > b). */
+  function generateSubtractionPair(tier) {
+    let minuend;
+    let sub;
+    if (tier === 1) {
+      minuend = randomInt(6, 18);
+      sub = randomInt(2, Math.min(minuend - 1, 9));
+    } else if (tier === 2) {
+      minuend = randomInt(14, Math.min(48, MAX_SUM));
+      sub = randomInt(5, minuend - 1);
+    } else {
+      minuend = randomInt(24, MAX_SUM);
+      sub = randomInt(10, minuend - 1);
+    }
+    if (sub < 2 || minuend - sub < 1) {
+      return generateSubtractionPair(tier);
+    }
+    return { a: minuend, b: sub, sum: minuend - sub };
+  }
+
+  /** @param {'add' | 'subtract'} op */
+  function generateChallengePair(tier, op) {
+    return op === "subtract" ? generateSubtractionPair(tier) : generateAdditionPair(tier);
+  }
+
+  function pickChallengeOp() {
+    if (state.playMode === "sub_only") return "subtract";
+    if (state.playMode === "add_only") return "add";
+    return Math.random() < 0.5 ? "add" : "subtract";
   }
 
   /**
@@ -106,7 +138,8 @@
 
   /** @type {{
    *   score: number,
-   *   operation: string,
+   *   playMode: 'add_only' | 'sub_only' | 'mixed',
+   *   challengeOp: 'add' | 'subtract',
    *   leftNumber: number,
    *   rightNumber: number,
    *   expectedResult: number,
@@ -121,7 +154,8 @@
    * }} */
   const state = {
     score: 0,
-    operation: "addition",
+    playMode: "add_only",
+    challengeOp: "add",
     leftNumber: 7,
     rightNumber: 8,
     expectedResult: 15,
@@ -142,7 +176,7 @@
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  /** @type {null | { idA: string, idB: string, v1: number, v2: number, sum: number, nx: number, ny: number }} */
+  /** @type {null | { idA: string, idB: string, v1: number, v2: number, result: number, scoreBasis: number, nx: number, ny: number, op: 'add' | 'subtract' }} */
   let pendingMerge = null;
 
   const els = {
@@ -156,6 +190,7 @@
     hudChallenge: document.getElementById("hud-challenge"),
     hudDifficulty: document.getElementById("hud-difficulty"),
     eqLeft: document.getElementById("eq-left"),
+    eqOp: document.getElementById("eq-op"),
     eqRight: document.getElementById("eq-right"),
     eqResult: document.getElementById("eq-result-label"),
     helpBanner: document.getElementById("help-banner"),
@@ -164,6 +199,7 @@
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
     mergeModal: document.getElementById("modal-merge"),
+    mergeTitle: document.getElementById("modal-merge-title"),
     mergePrompt: document.getElementById("modal-merge-prompt"),
     mergeHint: document.getElementById("modal-merge-hint"),
     mergeForm: document.getElementById("form-merge"),
@@ -241,6 +277,7 @@
 
   function syncEquation() {
     els.eqLeft.textContent = String(state.leftNumber);
+    els.eqOp.textContent = state.challengeOp === "subtract" ? "−" : "+";
     els.eqRight.textContent = String(state.rightNumber);
     els.eqResult.textContent = "?";
     els.hudChallenge.textContent = String(state.challengeIndex);
@@ -318,7 +355,8 @@
   function startChallenge(resetIndex) {
     closeMergeModalCancelled();
     const tier = tierFromScore(state.score);
-    const pair = generatePair(tier);
+    state.challengeOp = pickChallengeOp();
+    const pair = generateChallengePair(tier, state.challengeOp);
     state.leftNumber = pair.a;
     state.rightNumber = pair.b;
     state.expectedResult = pair.sum;
@@ -415,7 +453,7 @@
       applyEmergeFromSplit(ox, oy, [id1, id2]);
     }
     decomposeAnimating = false;
-    setHelp("Bien. Ahora acerca las piezas que quieras sumar.");
+    setHelp("Bien. Ahora acercá las burbujas que quieras fusionar.");
   }
 
   function bubbleCenterClient(b) {
@@ -493,19 +531,26 @@
   function openMergeModal(b, partner) {
     const nx = (b.x + partner.x) / 2;
     const ny = (b.y + partner.y) / 2;
+    const isSub = state.challengeOp === "subtract";
+    const hi = Math.max(b.value, partner.value);
+    const lo = Math.min(b.value, partner.value);
+    const result = isSub ? hi - lo : b.value + partner.value;
+    const scoreBasis = isSub ? hi : result;
     pendingMerge = {
       idA: b.id,
       idB: partner.id,
       v1: b.value,
       v2: partner.value,
-      sum: b.value + partner.value,
+      result,
+      scoreBasis,
+      op: isSub ? "subtract" : "add",
       nx,
       ny,
     };
-    els.mergePrompt.textContent = b.value + " + " + partner.value;
-    const sm = b.value + partner.value;
-    const gain = pointsForOperandSum(sm);
-    const pen = penaltyForOperandSum(sm);
+    els.mergeTitle.textContent = isSub ? "Restar burbujas" : "Sumar burbujas";
+    els.mergePrompt.textContent = isSub ? hi + " − " + lo : b.value + " + " + partner.value;
+    const gain = pointsForOperandSum(scoreBasis);
+    const pen = penaltyForOperandSum(scoreBasis);
     els.mergeHint.textContent =
       "Escribí el resultado. Si acertás: +" +
       gain +
@@ -542,12 +587,12 @@
     if (!pendingMerge) return;
     const pm = pendingMerge;
     pendingMerge = null;
-    applyScoreDelta(pointsForOperandSum(pm.sum));
+    applyScoreDelta(pointsForOperandSum(pm.scoreBasis));
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
     state.bubbles.push({
       id: nextId(),
-      value: pm.sum,
+      value: pm.result,
       x: pm.nx,
       y: pm.ny,
       source: "derived",
@@ -555,7 +600,11 @@
     hideMergeModalUI();
     renderBubbles();
     spawnMergeFireworks();
-    setHelp("¡Muy bien! Sigue uniendo piezas para simplificar la suma.");
+    setHelp(
+      state.challengeOp === "add"
+        ? "¡Muy bien! Seguí uniendo piezas para simplificar la suma."
+        : "¡Muy bien! Seguí restando y agrupando hasta llegar al resultado del reto."
+    );
   }
 
   function spawnMergeFireworks() {
@@ -625,9 +674,10 @@
 
   function openSuccessModal() {
     closeMergeModalCancelled();
+    const opLabel = state.challengeOp === "subtract" ? " − " : " + ";
     els.modalMsg.textContent =
       state.leftNumber +
-      " + " +
+      opLabel +
       state.rightNumber +
       " = " +
       state.expectedResult +
@@ -765,6 +815,8 @@
   }
 
   els.btnPlay.addEventListener("click", () => {
+    const sel = document.querySelector('input[name="play-mode"]:checked');
+    state.playMode = sel ? sel.value : "add_only";
     cancelAnimationFrame(scoreAnimId);
     state.score = 0;
     scoreShown = 0;
@@ -807,8 +859,8 @@
       els.mergeAnswer.focus();
       return;
     }
-    if (n !== pendingMerge.sum) {
-      applyScoreDelta(-penaltyForOperandSum(pendingMerge.sum));
+    if (n !== pendingMerge.result) {
+      applyScoreDelta(-penaltyForOperandSum(pendingMerge.scoreBasis));
       els.mergeFeedback.textContent = MERGE_WRONG_HINTS[mergeWrongIndex % MERGE_WRONG_HINTS.length];
       mergeWrongIndex += 1;
       els.mergeFeedback.hidden = false;

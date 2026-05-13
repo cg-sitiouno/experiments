@@ -112,6 +112,40 @@ body {
   outline-offset: 2px;
 }
 
+.mode-options {
+  margin: 0 0 1.25rem;
+  padding: 0.9rem 1rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.35);
+  text-align: left;
+}
+
+.mode-options .field__label {
+  margin-bottom: 0.65rem;
+}
+
+.mode-options__choice {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.mode-options__choice:last-child {
+  margin-bottom: 0;
+}
+
+.mode-options__choice input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .hint {
   margin: 0 0 1.25rem;
   font-size: 0.88rem;
