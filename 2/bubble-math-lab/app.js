@@ -31,6 +31,7 @@
     "En retos de resta, el sustraendo (a la derecha de la cuenta) lleva borde rojo brillante; si lo descompones, las piezas siguen en rojo: son las que hay que restar.",
     "En resta solo restas al juntar una pieza del minuendo con una del sustraendo; el minuendo tiene que ser mayor o igual (sin números negativos). Si juntas dos partes del mismo lado, sumas (recompones).",
     "Combina primero los números redondos: suele ser más fácil.",
+    "Burbuja con resplandor dorado: en la mesa hay varias decenas (10, 20…), conviene juntarlas primero. Celeste: aparece un 5 junto con piezas del 1 al 4.",
     "A más puntos, el juego te propone operaciones con números más grandes.",
     "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
     "Si acertás en el modal una suma “pequeña”, la próxima vez que juntes los mismos números se fusionan solos.",
@@ -594,9 +595,44 @@
     el.style.top = yPct + "%";
   }
 
-  function createBubbleEl(b) {
+  function bubbleEligibleForMergeHint(b) {
+    if (state.challengeOp === "subtract" && b.source === "subtrahend") return false;
+    return true;
+  }
+
+  function computeMergeHintStats(bubbles) {
+    let tens = 0;
+    let has5 = false;
+    let small = 0;
+    for (const b of bubbles) {
+      if (!bubbleEligibleForMergeHint(b)) continue;
+      const v = b.value;
+      if (v > 0 && v % 10 === 0) tens += 1;
+      if (v === 5) has5 = true;
+      if (v >= 1 && v < 5) small += 1;
+    }
+    return {
+      multiTens: tens >= 2,
+      fiveAndSmall: has5 && small >= 1,
+    };
+  }
+
+  function mergeHintClassForBubble(b, stats) {
+    if (!bubbleEligibleForMergeHint(b)) return "";
+    const v = b.value;
+    if (stats.multiTens && v > 0 && v % 10 === 0) return " bubble--hint-priority";
+    if (!stats.multiTens && stats.fiveAndSmall && (v === 5 || (v >= 1 && v < 5))) {
+      return " bubble--hint-secondary";
+    }
+    return "";
+  }
+
+  function createBubbleEl(b, hintStats) {
     const el = document.createElement("div");
-    el.className = "bubble" + (b.source === "subtrahend" ? " bubble--subtrahend" : "");
+    el.className =
+      "bubble" +
+      (b.source === "subtrahend" ? " bubble--subtrahend" : "") +
+      mergeHintClassForBubble(b, hintStats);
     el.dataset.id = b.id;
     el.setAttribute("role", "button");
     el.setAttribute(
@@ -615,8 +651,9 @@
 
   function renderBubbles() {
     clearBubbleEls();
+    const hintStats = computeMergeHintStats(state.bubbles);
     for (const b of state.bubbles) {
-      createBubbleEl(b);
+      createBubbleEl(b, hintStats);
     }
     checkPuzzleCompleteAuto();
   }
