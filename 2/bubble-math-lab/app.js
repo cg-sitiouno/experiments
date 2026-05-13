@@ -18,7 +18,8 @@
   const HELP_MESSAGES = [
     "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
-    "En restas, cada fusión resta la burbuja más chica a la más grande: pensá el orden antes de romper el minuendo.",
+    "En retos de resta, el sustraendo (derecha en la cuenta) lleva borde rojo brillante; si lo descomponés, las piezas siguen en rojo: son las que hay que restar.",
+    "En resta solo restás al juntar una pieza del minuendo con una del sustraendo; el minuendo tiene que ser mayor o igual (sin números negativos). Si juntás dos partes del mismo lado, sumás (recomponés).",
     "Combina primero los números redondos: suele ser más fácil.",
     "A más puntos, el juego te propone operaciones con números más grandes.",
     "Cuando en la mesa queda una sola burbuja con el resultado correcto, ¡ganaste el reto!",
@@ -149,7 +150,7 @@
    *     value: number,
    *     x: number,
    *     y: number,
-   *     source: string,
+   *     source: 'addend' | 'minuend' | 'subtrahend',
    *   }>,
    * }} */
   const state = {
@@ -176,7 +177,7 @@
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  /** @type {null | { idA: string, idB: string, v1: number, v2: number, result: number, scoreBasis: number, nx: number, ny: number, op: 'add' | 'subtract' }} */
+  /** @type {null | { idA: string, idB: string, v1: number, v2: number, result: number, scoreBasis: number, nx: number, ny: number, op: 'add' | 'subtract', sourceA: string, sourceB: string }} */
   let pendingMerge = null;
 
   const els = {
@@ -302,10 +303,13 @@
 
   function createBubbleEl(b) {
     const el = document.createElement("div");
-    el.className = "bubble";
+    el.className = "bubble" + (b.source === "subtrahend" ? " bubble--subtrahend" : "");
     el.dataset.id = b.id;
     el.setAttribute("role", "button");
-    el.setAttribute("aria-label", "Burbuja valor " + b.value);
+    el.setAttribute(
+      "aria-label",
+      b.source === "subtrahend" ? "Sustraendo, valor " + b.value : "Burbuja valor " + b.value
+    );
     const inner = document.createElement("span");
     inner.className = "bubble__inner";
     inner.textContent = String(b.value);
@@ -333,21 +337,66 @@
     openSuccessModal();
   }
 
+  /** Reto de suma: cualquier fusión suma. Resta: solo cruce minuendo ↔ sustraendo resta; el resto suma (recomponer). */
+  function mergeOpForPair(b, partner) {
+    if (state.challengeOp !== "subtract") return "add";
+    const aMin = b.source === "minuend";
+    const bMin = partner.source === "minuend";
+    const aSub = b.source === "subtrahend";
+    const bSub = partner.source === "subtrahend";
+    if ((aMin && bSub) || (aSub && bMin)) return "subtract";
+    return "add";
+  }
+
+  /** @returns {{ minuendVal: number, subVal: number } | null} */
+  function subtractCrossValues(b, partner) {
+    if (mergeOpForPair(b, partner) !== "subtract") return null;
+    if (b.source === "minuend" && partner.source === "subtrahend") {
+      return { minuendVal: b.value, subVal: partner.value };
+    }
+    if (b.source === "subtrahend" && partner.source === "minuend") {
+      return { minuendVal: partner.value, subVal: b.value };
+    }
+    return null;
+  }
+
+  /** En restas no permitimos resultados negativos (minuendo menor que el sustraendo). */
+  function isBlockedSubtractionMerge(b, partner) {
+    const sv = subtractCrossValues(b, partner);
+    if (!sv) return false;
+    return sv.minuendVal < sv.subVal;
+  }
+
+  function feedbackBlockedSubtraction(b, partner) {
+    setHelp(
+      "No podés restar si la parte del minuendo es más chica que el sustraendo. Usá una pieza del minuendo mayor o igual al sustraendo, o sumá antes partes del minuendo."
+    );
+    for (const id of [b.id, partner.id]) {
+      const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      if (bel) {
+        bel.classList.remove("bubble--shake");
+        void bel.offsetWidth;
+        bel.classList.add("bubble--shake");
+      }
+    }
+  }
+
   function initialBubbleLayout() {
+    const isSub = state.challengeOp === "subtract";
     return [
       {
         id: nextId(),
         value: state.leftNumber,
         x: 28,
         y: 38,
-        source: "left",
+        source: isSub ? "minuend" : "addend",
       },
       {
         id: nextId(),
         value: state.rightNumber,
         x: 72,
         y: 38,
-        source: "right",
+        source: isSub ? "subtrahend" : "addend",
       },
     ];
   }
@@ -509,10 +558,15 @@
   function highlightMergeCandidates(activeId, centerX, centerY) {
     const pt = { x: centerX, y: centerY };
     clearMergeHighlights();
+    const self = findBubble(activeId);
+    if (!self) return;
     for (const o of state.bubbles) {
       if (o.id === activeId) continue;
       const c = bubbleCenterClient(o);
       if (distance(pt, c) < MERGE_DISTANCE_PX) {
+        if (isBlockedSubtractionMerge(self, o)) {
+          return;
+        }
         const elA = els.playArea.querySelector('.bubble[data-id="' + activeId + '"]');
         const elO = els.playArea.querySelector('.bubble[data-id="' + o.id + '"]');
         if (elA) elA.classList.add("bubble--merge-target");
@@ -529,13 +583,33 @@
   }
 
   function openMergeModal(b, partner) {
+    if (isBlockedSubtractionMerge(b, partner)) {
+      return;
+    }
     const nx = (b.x + partner.x) / 2;
     const ny = (b.y + partner.y) / 2;
-    const isSub = state.challengeOp === "subtract";
-    const hi = Math.max(b.value, partner.value);
-    const lo = Math.min(b.value, partner.value);
-    const result = isSub ? hi - lo : b.value + partner.value;
-    const scoreBasis = isSub ? hi : result;
+    const mergeOp = mergeOpForPair(b, partner);
+    let result;
+    let scoreBasis;
+    let promptText;
+    if (mergeOp === "add") {
+      result = b.value + partner.value;
+      scoreBasis = result;
+      promptText = b.value + " + " + partner.value;
+    } else {
+      let minuendVal;
+      let subVal;
+      if (b.source === "minuend" && partner.source === "subtrahend") {
+        minuendVal = b.value;
+        subVal = partner.value;
+      } else {
+        minuendVal = partner.value;
+        subVal = b.value;
+      }
+      result = minuendVal - subVal;
+      scoreBasis = Math.max(minuendVal, subVal);
+      promptText = minuendVal + " − " + subVal;
+    }
     pendingMerge = {
       idA: b.id,
       idB: partner.id,
@@ -543,12 +617,14 @@
       v2: partner.value,
       result,
       scoreBasis,
-      op: isSub ? "subtract" : "add",
+      op: mergeOp,
+      sourceA: b.source,
+      sourceB: partner.source,
       nx,
       ny,
     };
-    els.mergeTitle.textContent = isSub ? "Restar burbujas" : "Sumar burbujas";
-    els.mergePrompt.textContent = isSub ? hi + " − " + lo : b.value + " + " + partner.value;
+    els.mergeTitle.textContent = mergeOp === "subtract" ? "Restar burbujas" : "Sumar burbujas";
+    els.mergePrompt.textContent = promptText;
     const gain = pointsForOperandSum(scoreBasis);
     const pen = penaltyForOperandSum(scoreBasis);
     els.mergeHint.textContent =
@@ -590,12 +666,21 @@
     applyScoreDelta(pointsForOperandSum(pm.scoreBasis));
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
+    let newSource;
+    if (pm.op === "subtract") {
+      newSource = "minuend";
+    } else if (state.challengeOp === "subtract") {
+      newSource =
+        pm.sourceA === "subtrahend" && pm.sourceB === "subtrahend" ? "subtrahend" : "minuend";
+    } else {
+      newSource = "addend";
+    }
     state.bubbles.push({
       id: nextId(),
       value: pm.result,
       x: pm.nx,
       y: pm.ny,
-      source: "derived",
+      source: newSource,
     });
     hideMergeModalUI();
     renderBubbles();
@@ -603,7 +688,9 @@
     setHelp(
       state.challengeOp === "add"
         ? "¡Muy bien! Seguí uniendo piezas para simplificar la suma."
-        : "¡Muy bien! Seguí restando y agrupando hasta llegar al resultado del reto."
+        : pm.op === "subtract"
+          ? "¡Muy bien! Cuando queden solo partes del minuendo, sumá las para llegar al resultado."
+          : "¡Muy bien! Seguí restando el sustraendo donde corresponda o sumando partes del minuendo."
     );
   }
 
@@ -634,7 +721,7 @@
     }
   }
 
-  function tryMergeOrPlace(b, el, centerX, centerY) {
+  function tryMergeOrPlace(b, el, centerX, centerY, dragState) {
     const selfCenter = { x: centerX, y: centerY };
     let partner = null;
     let best = MERGE_DISTANCE_PX;
@@ -648,6 +735,15 @@
       }
     }
     if (partner && best < MERGE_DISTANCE_PX) {
+      if (isBlockedSubtractionMerge(b, partner)) {
+        if (dragState) {
+          b.x = dragState.origX;
+          b.y = dragState.origY;
+          if (el) placeBubbleEl(el, b.x, b.y);
+        }
+        feedbackBlockedSubtraction(b, partner);
+        return true;
+      }
       openMergeModal(b, partner);
       return true;
     }
@@ -803,7 +899,7 @@
     }
     const cx = ev.clientX - hadDrag.grabOffset.x;
     const cy = ev.clientY - hadDrag.grabOffset.y;
-    if (tryMergeOrPlace(b, el, cx, cy)) {
+    if (tryMergeOrPlace(b, el, cx, cy, hadDrag)) {
       return;
     }
   }

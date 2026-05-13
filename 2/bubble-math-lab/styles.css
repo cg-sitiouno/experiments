@@ -358,7 +358,22 @@ body {
   transform: translateZ(0);
 }
 
-.bubble:nth-child(3n) .bubble__inner {
+/* Reto resta: piezas del sustraendo (incluidas las que salen de descomponerlo) */
+.bubble--subtrahend .bubble__inner {
+  border-color: rgba(248, 113, 113, 0.95);
+  border-width: 2px;
+  background: radial-gradient(
+    circle at 30% 28%,
+    rgba(255, 255, 255, 0.48),
+    rgba(254, 202, 202, 0.28) 42%,
+    rgba(252, 165, 165, 0.22)
+  );
+  box-shadow:
+    0 0 18px rgba(239, 68, 68, 0.65),
+    0 0 32px rgba(220, 38, 38, 0.35),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.22);
+}
+
   animation-duration: 5.6s;
   animation-delay: -1.2s;
 }
@@ -388,6 +403,13 @@ body {
   transition: transform 0.28s cubic-bezier(0.33, 1, 0.32, 1), box-shadow 0.25s ease;
 }
 
+.bubble--subtrahend:hover .bubble__inner {
+  box-shadow:
+    0 0 34px rgba(239, 68, 68, 0.6),
+    0 0 48px rgba(248, 113, 113, 0.42),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.18);
+}
+
 .bubble:not(:hover) .bubble__inner {
   transition: box-shadow 0.22s ease;
 }
@@ -404,9 +426,24 @@ body {
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
+.bubble--subtrahend.bubble--dragging .bubble__inner {
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.48),
+    0 0 42px rgba(248, 113, 113, 0.65),
+    0 0 28px rgba(239, 68, 68, 0.45);
+}
+
 .bubble--merge-target .bubble__inner {
   animation: none;
   box-shadow: 0 0 0 3px var(--accent-3), 0 0 32px rgba(253, 224, 71, 0.55), inset 0 -6px 16px rgba(15, 23, 42, 0.15);
+}
+
+.bubble--subtrahend.bubble--merge-target .bubble__inner {
+  box-shadow:
+    0 0 0 3px var(--accent-3),
+    0 0 32px rgba(253, 224, 71, 0.55),
+    0 0 26px rgba(239, 68, 68, 0.5),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.15);
 }
 
 .bubble--shake .bubble__inner {
