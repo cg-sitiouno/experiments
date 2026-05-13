@@ -343,6 +343,55 @@ body {
   font-weight: 700;
 }
 
+/* Barra: 10 aciertos seguidos en el modal → modo autofusión; en modo se vacía en ~30 s sin actividad */
+.fusion-bar {
+  width: min(900px, 100%);
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.65rem 0.6rem;
+  border-radius: 0.85rem;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.fusion-bar--active {
+  border-color: rgba(253, 224, 71, 0.45);
+  box-shadow: 0 0 20px rgba(253, 224, 71, 0.15);
+}
+
+.fusion-bar__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+.fusion-bar--active .fusion-bar__label {
+  color: var(--accent-3);
+}
+
+.fusion-bar__track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.fusion-bar__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(124, 255, 223, 0.85), rgba(192, 132, 252, 0.9));
+  box-shadow: 0 0 14px rgba(124, 255, 223, 0.45);
+  transition: width 0.2s ease-out;
+}
+
+.fusion-bar--active .fusion-bar__fill {
+  background: linear-gradient(90deg, rgba(253, 224, 71, 0.95), rgba(250, 204, 21, 0.85));
+  box-shadow: 0 0 16px rgba(253, 224, 71, 0.5);
+}
+
 .help-banner {
   width: min(900px, 100%);
   min-height: 2.75rem;

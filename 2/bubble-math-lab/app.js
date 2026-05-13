@@ -15,6 +15,13 @@
   /** Enteros menores que esto no se descomponen (piezas base: 1–4 se combinan, no se rompen). */
   const MIN_DECOMPOSE = 5;
 
+  /** Aciertos seguidos en el modal para llenar la barra y activar autofusión. */
+  const AUTO_FUSION_MODAL_STREAK = 10;
+  /** En modo autofusión, la energía baja de 1 a 0 en este lapso si no recargás con fusiones o descomposiciones. */
+  const AUTO_FUSION_DRAIN_SEC = 30;
+  /** Cuánto sube la energía (0–1) por actividad válida en modo autofusión. */
+  const AUTO_FUSION_ACTIVITY_BUMP = 0.07;
+
   const HELP_MESSAGES = [
     "Los números del 1 al 4 no se rompen: son piezas pequeñas para combinar.",
     "Puedes romper un número en partes con un clic (si es " + MIN_DECOMPOSE + " o más y se puede dividir).",
@@ -173,6 +180,13 @@
   /** Evita doble descomposición mientras corre la animación */
   let decomposeAnimating = false;
 
+  /** Carga modal 0…10; modo autofusión con combustible 0…1. */
+  let consecutiveModalCorrect = 0;
+  let autoFusionActive = false;
+  let autoFusionFuel = 0;
+  let fusionDrainRaf = 0;
+  let lastFusionDrainTs = 0;
+
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
@@ -194,6 +208,9 @@
     eqOp: document.getElementById("eq-op"),
     eqRight: document.getElementById("eq-right"),
     eqResult: document.getElementById("eq-result-label"),
+    fusionBar: document.getElementById("fusion-bar"),
+    fusionBarFill: document.getElementById("fusion-bar-fill"),
+    fusionBarLabel: document.getElementById("fusion-bar-label"),
     helpBanner: document.getElementById("help-banner"),
     playArea: document.getElementById("play-area"),
     modal: document.getElementById("modal-success"),
@@ -252,11 +269,13 @@
   }
 
   function applyScoreDelta(delta) {
+    const mult = autoFusionActive && delta > 0 ? 2 : 1;
+    const d = delta * mult;
     const was = state.score;
-    state.score = Math.max(0, state.score + delta);
-    flashHudScoreClass(delta >= 0);
+    state.score = Math.max(0, state.score + d);
+    flashHudScoreClass(d >= 0);
     runScoreAnimationTo(state.score);
-    if (delta < 0 && was > 0 && state.score === 0) {
+    if (d < 0 && was > 0 && state.score === 0) {
       setHelp("Tus puntos no bajan de cero. ¡Sigue intentando!");
     }
   }
@@ -274,6 +293,208 @@
   function rotateHelp() {
     setHelp(HELP_MESSAGES[helpIndex % HELP_MESSAGES.length]);
     helpIndex += 1;
+  }
+
+  function updateFusionBarUi() {
+    if (!els.fusionBarFill || !els.fusionBarLabel) return;
+    let pct = 0;
+    let label = "";
+    if (autoFusionActive) {
+      pct = Math.max(0, Math.min(100, autoFusionFuel * 100));
+      label =
+        "Autofusión activa · " +
+        Math.round(pct) +
+        "% · puntos ×2 · fusiona o descompone para recargar";
+    } else {
+      pct = Math.max(0, Math.min(100, (consecutiveModalCorrect / AUTO_FUSION_MODAL_STREAK) * 100));
+      label =
+        "Autofusión " +
+        consecutiveModalCorrect +
+        "/" +
+        AUTO_FUSION_MODAL_STREAK +
+        " aciertos seguidos (modal)";
+    }
+    els.fusionBarFill.style.width = pct + "%";
+    els.fusionBarLabel.textContent = label;
+  }
+
+  function bumpAutoFusionFuel() {
+    if (!autoFusionActive) return;
+    autoFusionFuel = Math.min(1, autoFusionFuel + AUTO_FUSION_ACTIVITY_BUMP);
+    updateFusionBarUi();
+  }
+
+  function cancelFusionDrainLoop() {
+    if (fusionDrainRaf) {
+      cancelAnimationFrame(fusionDrainRaf);
+      fusionDrainRaf = 0;
+    }
+  }
+
+  function fusionDrainTick(now) {
+    if (!autoFusionActive || els.screenGame.hidden) {
+      fusionDrainRaf = 0;
+      return;
+    }
+    const dt = Math.min(0.48, (now - lastFusionDrainTs) / 1000);
+    lastFusionDrainTs = now;
+    autoFusionFuel -= dt / AUTO_FUSION_DRAIN_SEC;
+    if (autoFusionFuel <= 0) {
+      autoFusionFuel = 0;
+      exitAutoFusionMode();
+      setHelp(
+        "Modo autofusión terminado. Acierta diez veces seguidas en el modal para volver a llenar la barra."
+      );
+      fusionDrainRaf = 0;
+      return;
+    }
+    updateFusionBarUi();
+    fusionDrainRaf = requestAnimationFrame(fusionDrainTick);
+  }
+
+  function ensureFusionDrainLoop() {
+    if (!autoFusionActive || els.screenGame.hidden) return;
+    if (!fusionDrainRaf) {
+      lastFusionDrainTs = performance.now();
+      fusionDrainRaf = requestAnimationFrame(fusionDrainTick);
+    }
+  }
+
+  function enterAutoFusionMode() {
+    if (autoFusionActive) return;
+    autoFusionActive = true;
+    autoFusionFuel = 1;
+    consecutiveModalCorrect = 0;
+    if (els.fusionBar) els.fusionBar.classList.add("fusion-bar--active");
+    updateFusionBarUi();
+    ensureFusionDrainLoop();
+    setHelp(
+      "¡Autofusión! Las piezas simples se fusionan solas al acercarlas. Tus puntos valen el doble. Mantén la barra fusionando y descomponiendo."
+    );
+  }
+
+  function exitAutoFusionMode() {
+    if (!autoFusionActive) return;
+    autoFusionActive = false;
+    autoFusionFuel = 0;
+    cancelFusionDrainLoop();
+    if (els.fusionBar) els.fusionBar.classList.remove("fusion-bar--active");
+    updateFusionBarUi();
+  }
+
+  function resetModalStreak() {
+    consecutiveModalCorrect = 0;
+    updateFusionBarUi();
+  }
+
+  function onSuccessfulModalMerge() {
+    if (autoFusionActive) return;
+    consecutiveModalCorrect += 1;
+    updateFusionBarUi();
+    if (consecutiveModalCorrect >= AUTO_FUSION_MODAL_STREAK) {
+      enterAutoFusionMode();
+    }
+  }
+
+  /** Suma "primitiva": 1+1, 5+m (m≤5), 10+n (n≤10), o ambos ≤5. */
+  function isPrimitiveAddPair(a, b) {
+    if (a === 1 && b === 1) return true;
+    if ((a === 5 && b <= 5 && b >= 1) || (b === 5 && a <= 5 && a >= 1)) return true;
+    if ((a === 10 && b <= 10 && b >= 1) || (b === 10 && a <= 10 && a >= 1)) return true;
+    if (a <= 5 && b <= 5 && a >= 1 && b >= 1) return true;
+    return false;
+  }
+
+  function isPrimitiveSubtractPair(minuendVal, subVal) {
+    if (minuendVal < subVal || subVal < 1) return false;
+    return minuendVal <= 10 && subVal <= 10;
+  }
+
+  function isPrimitiveAutoFuseMerge(b, partner) {
+    if (!autoFusionActive) return false;
+    if (isBlockedSubtractionMerge(b, partner)) return false;
+    const op = mergeOpForPair(b, partner);
+    if (op === "add") {
+      return isPrimitiveAddPair(b.value, partner.value);
+    }
+    if (b.source === "minuend" && partner.source === "subtrahend") {
+      return isPrimitiveSubtractPair(b.value, partner.value);
+    }
+    if (b.source === "subtrahend" && partner.source === "minuend") {
+      return isPrimitiveSubtractPair(partner.value, b.value);
+    }
+    return false;
+  }
+
+  function buildMergePayload(b, partner) {
+    const nx = (b.x + partner.x) / 2;
+    const ny = (b.y + partner.y) / 2;
+    const mergeOp = mergeOpForPair(b, partner);
+    let result;
+    let scoreBasis;
+    if (mergeOp === "add") {
+      result = b.value + partner.value;
+      scoreBasis = result;
+    } else {
+      let minuendVal;
+      let subVal;
+      if (b.source === "minuend" && partner.source === "subtrahend") {
+        minuendVal = b.value;
+        subVal = partner.value;
+      } else {
+        minuendVal = partner.value;
+        subVal = b.value;
+      }
+      result = minuendVal - subVal;
+      scoreBasis = Math.max(minuendVal, subVal);
+    }
+    return {
+      idA: b.id,
+      idB: partner.id,
+      v1: b.value,
+      v2: partner.value,
+      result,
+      scoreBasis,
+      op: mergeOp,
+      sourceA: b.source,
+      sourceB: partner.source,
+      nx,
+      ny,
+    };
+  }
+
+  function runMergeCore(pm) {
+    applyScoreDelta(pointsForOperandSum(pm.scoreBasis));
+    removeBubbleById(pm.idA);
+    removeBubbleById(pm.idB);
+    let newSource;
+    if (pm.op === "subtract") {
+      newSource = "minuend";
+    } else if (state.challengeOp === "subtract") {
+      newSource =
+        pm.sourceA === "subtrahend" && pm.sourceB === "subtrahend" ? "subtrahend" : "minuend";
+    } else {
+      newSource = "addend";
+    }
+    state.bubbles.push({
+      id: nextId(),
+      value: pm.result,
+      x: pm.nx,
+      y: pm.ny,
+      source: newSource,
+    });
+    renderBubbles();
+    spawnMergeFireworks();
+    setHelp(
+      state.challengeOp === "add"
+        ? "¡Muy bien! Sigue uniendo piezas para simplificar la suma."
+        : pm.op === "subtract"
+          ? "¡Muy bien! Cuando queden solo partes del minuendo, súmalas para llegar al resultado."
+          : "¡Muy bien! Sigue restando el sustraendo donde corresponda o sumando partes del minuendo."
+    );
+    if (autoFusionActive) {
+      bumpAutoFusionFuel();
+    }
   }
 
   function syncEquation() {
@@ -503,6 +724,10 @@
     }
     decomposeAnimating = false;
     setHelp("Bien. Ahora acerca las burbujas que quieras fusionar.");
+    if (autoFusionActive) {
+      bumpAutoFusionFuel();
+      ensureFusionDrainLoop();
+    }
   }
 
   function bubbleCenterClient(b) {
@@ -586,53 +811,29 @@
     if (isBlockedSubtractionMerge(b, partner)) {
       return;
     }
-    const nx = (b.x + partner.x) / 2;
-    const ny = (b.y + partner.y) / 2;
-    const mergeOp = mergeOpForPair(b, partner);
-    let result;
-    let scoreBasis;
-    let promptText;
-    if (mergeOp === "add") {
-      result = b.value + partner.value;
-      scoreBasis = result;
-      promptText = b.value + " + " + partner.value;
-    } else {
-      let minuendVal;
-      let subVal;
-      if (b.source === "minuend" && partner.source === "subtrahend") {
-        minuendVal = b.value;
-        subVal = partner.value;
-      } else {
-        minuendVal = partner.value;
-        subVal = b.value;
-      }
-      result = minuendVal - subVal;
-      scoreBasis = Math.max(minuendVal, subVal);
-      promptText = minuendVal + " − " + subVal;
-    }
-    pendingMerge = {
-      idA: b.id,
-      idB: partner.id,
-      v1: b.value,
-      v2: partner.value,
-      result,
-      scoreBasis,
-      op: mergeOp,
-      sourceA: b.source,
-      sourceB: partner.source,
-      nx,
-      ny,
-    };
-    els.mergeTitle.textContent = mergeOp === "subtract" ? "Restar burbujas" : "Sumar burbujas";
+    const pm = buildMergePayload(b, partner);
+    pendingMerge = pm;
+    const promptText =
+      pm.op === "add"
+        ? pm.v1 + " + " + pm.v2
+        : b.source === "minuend" && partner.source === "subtrahend"
+          ? b.value + " − " + partner.value
+          : partner.value + " − " + b.value;
+    els.mergeTitle.textContent = pm.op === "subtract" ? "Restar burbujas" : "Sumar burbujas";
     els.mergePrompt.textContent = promptText;
-    const gain = pointsForOperandSum(scoreBasis);
-    const pen = penaltyForOperandSum(scoreBasis);
-    els.mergeHint.textContent =
+    const gain = pointsForOperandSum(pm.scoreBasis);
+    const pen = penaltyForOperandSum(pm.scoreBasis);
+    const gainShow = autoFusionActive ? gain * 2 : gain;
+    let hint =
       "Escribe el resultado. Si aciertas: +" +
-      gain +
+      gainShow +
       " pts. Si fallas: −" +
       pen +
       " pts (el puntaje no baja de 0).";
+    if (autoFusionActive) {
+      hint += " Modo autofusión: los puntos ganados valen el doble.";
+    }
+    els.mergeHint.textContent = hint;
     els.mergeAnswer.value = "";
     els.mergeFeedback.hidden = true;
     els.mergeFeedback.textContent = "";
@@ -663,35 +864,9 @@
     if (!pendingMerge) return;
     const pm = pendingMerge;
     pendingMerge = null;
-    applyScoreDelta(pointsForOperandSum(pm.scoreBasis));
-    removeBubbleById(pm.idA);
-    removeBubbleById(pm.idB);
-    let newSource;
-    if (pm.op === "subtract") {
-      newSource = "minuend";
-    } else if (state.challengeOp === "subtract") {
-      newSource =
-        pm.sourceA === "subtrahend" && pm.sourceB === "subtrahend" ? "subtrahend" : "minuend";
-    } else {
-      newSource = "addend";
-    }
-    state.bubbles.push({
-      id: nextId(),
-      value: pm.result,
-      x: pm.nx,
-      y: pm.ny,
-      source: newSource,
-    });
     hideMergeModalUI();
-    renderBubbles();
-    spawnMergeFireworks();
-    setHelp(
-      state.challengeOp === "add"
-        ? "¡Muy bien! Sigue uniendo piezas para simplificar la suma."
-        : pm.op === "subtract"
-          ? "¡Muy bien! Cuando queden solo partes del minuendo, súmalas para llegar al resultado."
-          : "¡Muy bien! Sigue restando el sustraendo donde corresponda o sumando partes del minuendo."
-    );
+    runMergeCore(pm);
+    onSuccessfulModalMerge();
   }
 
   function spawnMergeFireworks() {
@@ -742,6 +917,11 @@
           if (el) placeBubbleEl(el, b.x, b.y);
         }
         feedbackBlockedSubtraction(b, partner);
+        return true;
+      }
+      if (isPrimitiveAutoFuseMerge(b, partner)) {
+        const pm = buildMergePayload(b, partner);
+        runMergeCore(pm);
         return true;
       }
       openMergeModal(b, partner);
@@ -913,6 +1093,10 @@
   els.btnPlay.addEventListener("click", () => {
     const sel = document.querySelector('input[name="play-mode"]:checked');
     state.playMode = sel ? sel.value : "add_only";
+    cancelFusionDrainLoop();
+    exitAutoFusionMode();
+    consecutiveModalCorrect = 0;
+    updateFusionBarUi();
     cancelAnimationFrame(scoreAnimId);
     state.score = 0;
     scoreShown = 0;
@@ -925,6 +1109,10 @@
   els.btnHome.addEventListener("click", () => {
     closeSuccessModal();
     closeMergeModalCancelled();
+    cancelFusionDrainLoop();
+    exitAutoFusionMode();
+    consecutiveModalCorrect = 0;
+    updateFusionBarUi();
     showScreen("start");
   });
 
@@ -957,6 +1145,7 @@
     }
     if (n !== pendingMerge.result) {
       applyScoreDelta(-penaltyForOperandSum(pendingMerge.scoreBasis));
+      resetModalStreak();
       els.mergeFeedback.textContent = MERGE_WRONG_HINTS[mergeWrongIndex % MERGE_WRONG_HINTS.length];
       mergeWrongIndex += 1;
       els.mergeFeedback.hidden = false;
@@ -982,4 +1171,5 @@
 
   bindGlobalPointer();
   setHelp(HELP_MESSAGES[0]);
+  updateFusionBarUi();
 })();
