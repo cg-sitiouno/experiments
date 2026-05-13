@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const MERGE_DISTANCE_PX = 76;
+  const MERGE_DISTANCE_PX = 84;
   const DRAG_THRESHOLD_PX = 10;
   const MAX_SUM = 99;
 
