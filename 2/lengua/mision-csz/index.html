@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Misión C/S/Z — elige la letra correcta para completar cada palabra." />
+    <title>Misión C/S/Z</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <!-- INICIO -->
+    <section id="screen-start" class="screen screen--start" aria-label="Inicio">
+      <a href="../index.html" class="link-hub">← Lengua Lab</a>
+      <div class="mission-art" aria-hidden="true">
+        <span class="letter-badge letter-badge--c">C</span>
+        <span class="letter-badge letter-badge--s">S</span>
+        <span class="letter-badge letter-badge--z">Z</span>
+      </div>
+      <h1 class="start-title">Misión C/S/Z</h1>
+      <p class="start-desc">
+        Lee la oración y elige la letra correcta<br>para completar la palabra.
+      </p>
+      <div class="level-grid" role="group" aria-label="Elige un nivel">
+        <button type="button" class="btn-level" data-level="1">
+          <span class="btn-level__name">Nivel 1</span>
+          <span class="btn-level__hint">ZA, ZO, ZU · SA, SO, SU · CE, CI</span>
+        </button>
+        <button type="button" class="btn-level" data-level="2">
+          <span class="btn-level__name">Nivel 2</span>
+          <span class="btn-level__hint">Contexto: casa/caza, coser/cocer…</span>
+        </button>
+        <button type="button" class="btn-level" data-level="3">
+          <span class="btn-level__name">Nivel 3</span>
+          <span class="btn-level__hint">Sufijos -ción, -sión, -zón y más</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- JUEGO -->
+    <section id="screen-game" class="screen screen--game" hidden aria-label="Partida">
+      <div class="hud" role="status" aria-live="polite">
+        <span class="hud__item">
+          <span class="hud__label">Puntos</span>
+          <span class="hud__value hud__value--gold" id="hud-points">0</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__label">Ronda</span>
+          <span class="hud__value" id="hud-round">1 / 10</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__value hud__value--level" id="hud-level">Nivel 1</span>
+        </span>
+      </div>
+
+      <div class="sentence-stage" aria-live="polite">
+        <p class="sentence-display" id="sentence-display"></p>
+        <p class="completed-word" id="completed-word"></p>
+      </div>
+
+      <div class="letters" role="group" aria-label="Elige una letra">
+        <button type="button" class="letter-btn letter-btn--c" data-letter="c">
+          <span class="letter-btn__char">C</span>
+          <span class="letter-btn__label">ce · ci</span>
+        </button>
+        <button type="button" class="letter-btn letter-btn--s" data-letter="s">
+          <span class="letter-btn__char">S</span>
+          <span class="letter-btn__label">sa · se · si</span>
+        </button>
+        <button type="button" class="letter-btn letter-btn--z" data-letter="z">
+          <span class="letter-btn__char">Z</span>
+          <span class="letter-btn__label">za · zo · zu</span>
+        </button>
+      </div>
+
+      <div id="feedback-bar" class="feedback-bar" hidden role="alert">
+        <span id="feedback-text"></span>
+      </div>
+
+      <footer class="game-footer">
+        <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
+        <a class="btn-ghost" href="../index.html">Lengua Lab</a>
+      </footer>
+    </section>
+
+    <!-- RESULTADO -->
+    <section id="screen-result" class="screen screen--result" hidden aria-label="Resultado">
+      <h2 class="result-title">¡Misión cumplida!</h2>
+      <div class="result-stars" id="result-stars"></div>
+      <div class="result-points" id="result-points"></div>
+      <p class="result-msg" id="result-msg"></p>
+      <div class="result-actions">
+        <button type="button" class="btn-primary" id="btn-play-again">Jugar de nuevo</button>
+        <a class="btn-secondary" href="../index.html">← Lengua Lab</a>
+      </div>
+    </section>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

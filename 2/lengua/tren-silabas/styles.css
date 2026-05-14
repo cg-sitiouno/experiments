@@ -1,0 +1,171 @@
+/* Tren de Sílabas */
+
+:root {
+  --bg-deep: #0c0618;
+  --bg-mid: #1a0f35;
+  --text: #f4f7ff;
+  --muted: rgba(232, 238, 255, 0.72);
+  --font: "Nunito", system-ui, sans-serif;
+  --amber: #f59e0b;
+  --amber-soft: rgba(245,158,11,0.28);
+  --amber-glow: rgba(245,158,11,0.5);
+  --ok: #22c55e;
+  --no: #ef4444;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  margin: 0; min-height: 100%; font-family: var(--font); color: var(--text);
+  background:
+    radial-gradient(ellipse 110% 70% at 50% -10%, #1c1000 0%, transparent 55%),
+    radial-gradient(ellipse 80% 60% at 0% 90%, rgba(245,158,11,0.1) 0%, transparent 50%),
+    linear-gradient(165deg, var(--bg-deep) 0%, #12100a 50%, #0a0816 100%);
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+
+.screen {
+  min-height: 100dvh; display: flex; flex-direction: column;
+  padding: clamp(1rem,3vw,1.75rem) clamp(1rem,4vw,2rem);
+  max-width: 700px; margin: 0 auto;
+}
+
+/* START */
+.screen--start { align-items: center; justify-content: center; gap: clamp(0.75rem,2vw,1.2rem); text-align: center; }
+
+.link-hub { position: absolute; top: 1rem; left: 1rem; color: var(--muted); font-size: .88rem; font-weight: 600; text-decoration: none; transition: color .2s; }
+.link-hub:hover { color: var(--text); }
+
+.train-art { display: flex; gap: 0.4rem; align-items: center; justify-content: center; margin-bottom: 0.25rem; }
+.wagon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: clamp(2.2rem,8vw,3rem); height: clamp(2.2rem,8vw,3rem);
+  border-radius: 8px; font-size: clamp(0.9rem,3vw,1.2rem); font-weight: 800;
+  background: rgba(245,158,11,.12); border: 2px solid rgba(245,158,11,.3); color: #fde68a;
+}
+.wagon--active {
+  background: rgba(245,158,11,.28); border-color: var(--amber);
+  color: #fff; box-shadow: 0 0 20px var(--amber-soft);
+}
+
+.start-title { margin: 0; font-size: clamp(1.7rem,5vw,2.5rem); font-weight: 800; text-shadow: 0 0 40px rgba(245,158,11,.4); }
+.start-desc { margin: 0; max-width: 24rem; font-size: clamp(.92rem,2.5vw,1.05rem); font-weight: 600; color: var(--muted); line-height: 1.6; }
+
+.level-grid { display: grid; gap: .75rem; width: 100%; max-width: 28rem; margin-top: .5rem; }
+.btn-level {
+  width: 100%; padding: .85rem 1.25rem; border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+  color: var(--text); font-family: var(--font); cursor: pointer;
+  text-align: left; display: flex; flex-direction: column; gap: .15rem;
+  transition: background .2s, transform .15s, border-color .2s;
+}
+.btn-level:hover { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.35); transform: translateX(5px); }
+.btn-level__name { font-size: 1.05rem; font-weight: 800; }
+.btn-level__hint { font-size: .82rem; font-weight: 600; color: var(--muted); }
+
+/* GAME */
+.screen--game { gap: .75rem; }
+
+.hud {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .6rem 1rem; border-radius: 14px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); flex-shrink: 0;
+}
+.hud__item { display: flex; flex-direction: column; align-items: center; gap: .05rem; }
+.hud__label { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.hud__value { font-size: clamp(.9rem,2.5vw,1rem); font-weight: 800; }
+.hud__value--gold { color: #fde047; }
+.hud__value--level { color: #fde68a; font-size: .85rem; }
+
+.word-stage {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: .75rem; text-align: center;
+}
+.word-display {
+  margin: 0; font-size: clamp(1.8rem,7vw,3.2rem); font-weight: 800;
+  letter-spacing: .04em;
+  text-shadow: 0 0 30px rgba(245,158,11,.2);
+}
+.syllable-hint {
+  margin: 0; font-size: clamp(.9rem,2.5vw,1.1rem); font-weight: 600;
+  color: rgba(253,230,138,.7); letter-spacing: .08em; min-height: 1.5em;
+}
+
+/* Wagon buttons — cuadrícula 2x2 */
+.wagons {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: clamp(.5rem,2vw,.85rem); flex-shrink: 0;
+}
+.wagon-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .3rem; padding: clamp(.7rem,2.5vw,1.1rem) .75rem;
+  border-radius: 18px; border: 2px solid rgba(245,158,11,.32);
+  background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,.2) 0%, rgba(120,53,15,.1) 100%);
+  color: var(--text); font-family: var(--font); cursor: pointer;
+  box-shadow: 0 4px 18px rgba(245,158,11,.12);
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.wagon-btn:hover:not(:disabled) {
+  border-color: var(--amber); box-shadow: 0 8px 28px var(--amber-glow); transform: translateY(-5px);
+}
+.wagon-btn__num { font-size: clamp(1.4rem,5vw,2rem); font-weight: 800; color: #fde68a; line-height: 1; }
+.wagon-btn__name { font-size: clamp(.72rem,2vw,.88rem); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.wagon-btn:disabled { cursor: not-allowed; opacity: .7; }
+.wagon-btn--correct {
+  border-color: var(--ok) !important;
+  background: rgba(34,197,94,.22) !important;
+  box-shadow: 0 0 28px rgba(34,197,94,.55) !important;
+  transform: scale(1.04) !important;
+}
+.wagon-btn--wrong {
+  border-color: var(--no) !important;
+  background: rgba(239,68,68,.2) !important;
+  animation: shake .32s ease;
+}
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+.feedback-bar {
+  padding: .6rem 1rem; border-radius: 12px; text-align: center;
+  font-size: clamp(.9rem,2.5vw,1rem); font-weight: 700; flex-shrink: 0;
+  animation: slideDown .2s ease;
+}
+@keyframes slideDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.feedback-bar--ok { background: rgba(34,197,94,.2); border: 1px solid rgba(34,197,94,.4); color: #86efac; }
+.feedback-bar--no { background: rgba(239,68,68,.2); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; }
+
+.game-footer { display: flex; gap: .5rem; justify-content: center; padding-top: .25rem; flex-shrink: 0; }
+.btn-ghost {
+  padding: .45rem .9rem; border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05); color: var(--muted); font: 600 .82rem var(--font);
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+  transition: color .2s, border-color .2s;
+}
+.btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,.28); }
+
+/* RESULT */
+.screen--result { align-items: center; justify-content: center; text-align: center; gap: clamp(.75rem,2vw,1.1rem); }
+.result-title { margin: 0; font-size: clamp(1.5rem,5vw,2.2rem); font-weight: 800; text-shadow: 0 0 40px rgba(245,158,11,.4); }
+.result-stars { font-size: clamp(2rem,8vw,3rem); line-height: 1; letter-spacing: .05em; }
+.result-points { font-size: clamp(1.3rem,4vw,1.8rem); font-weight: 800; color: #fde047; }
+.result-msg { margin: 0; max-width: 22rem; font-size: clamp(.95rem,2.5vw,1.1rem); font-weight: 600; color: var(--muted); line-height: 1.5; }
+.result-actions { display: flex; flex-direction: column; gap: .7rem; width: 100%; max-width: 260px; margin-top: .4rem; }
+.btn-primary {
+  padding: .8rem 1.5rem; border-radius: 14px; border: none;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff; font: 800 1rem var(--font); cursor: pointer;
+  box-shadow: 0 4px 18px rgba(217,119,6,.45); transition: transform .15s, box-shadow .15s;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(217,119,6,.55); }
+.btn-secondary {
+  padding: .7rem 1.5rem; border-radius: 14px; border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06); color: var(--muted); font: 700 .95rem var(--font);
+  text-decoration: none; text-align: center; display: block; transition: color .2s, border-color .2s;
+}
+.btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,.3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .wagon-btn, .btn-level { transition: none; }
+  .wagon-btn--wrong { animation: none; }
+  .feedback-bar { animation: none; }
+}

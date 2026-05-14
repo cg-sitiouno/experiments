@@ -250,6 +250,48 @@ body {
     0 0 56px rgba(16, 185, 129, 0.22);
 }
 
+.game-card--vocal {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(244, 114, 182, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--vocal:hover {
+  border-color: rgba(244, 114, 182, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(244, 114, 182, 0.22);
+}
+
+.game-card--tren {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(245, 158, 11, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--tren:hover {
+  border-color: rgba(253, 224, 71, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(245, 158, 11, 0.22);
+}
+
+.game-card--csz {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(34, 197, 94, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--csz:hover {
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(34, 197, 94, 0.22);
+}
+
 /* Tarjeta bloqueada / próximamente */
 .game-card--locked {
   opacity: 0.42;
