@@ -1,13 +1,15 @@
-# Publica el hub de juegos (selector) + Bubble Math Lab + Mystery Box en GitHub Pages.
-# Se arma _site/ solo con index.html, game-select.css y las dos carpetas de juego
-# (no se suben specs ni markdown internos).
+# Publica el portal educativo completo en GitHub Pages.
+#
+# Estructura desplegada:
+#   /                  → selector de materias (Matemática / Lengua)
+#   /matematica/       → hub de matemática + bubble-math-lab + mystery-box
+#   /lengua/           → hub de lengua + 5 juegos (máquina del tiempo, cazador de
+#                        sílabas, fuerza vocal, tren de sílabas, misión c/s/z)
 #
 # Tras el push: Repo → Settings → Pages → Source: GitHub Actions.
 # URL típica: https://<usuario>.github.io/experiments/
-#
-# Enlaces relativos: bubble-math-lab/, mystery-box/, game-select.css en la raíz del deploy.
 
-name: Deploy math games hub
+name: Deploy portal educativo
 
 on:
   push:
@@ -36,11 +38,12 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare site (hub + juegos, sin specs ni planes)
+      - name: Prepare site
         run: |
           mkdir -p _site
-          cp -f 2/index.html 2/game-select.css _site/
-          cp -r 2/bubble-math-lab 2/mystery-box _site/
+          cp 2/index.html 2/game-select.css _site/
+          cp -r 2/matematica _site/
+          cp -r 2/lengua _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
