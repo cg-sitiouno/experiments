@@ -10,6 +10,9 @@
   const DIFFICULTY_TIER_2_AT = 400;
   const DIFFICULTY_TIER_3_AT = 1500;
 
+  /** Suma ya dominada en el modal → próxima fusión del mismo par sin preguntar (misma regla que Bubble Math Lab). */
+  const LEARNED_ADD_SUMS_KEY = "mystery-box-learned-add-v1";
+
   let idCounter = 0;
   function nextId() {
     if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -26,6 +29,47 @@
     if (score >= DIFFICULTY_TIER_2_AT) return 2;
     return 1;
   }
+
+  function canonicalAddPairKey(a, b) {
+    return Math.min(a, b) + ":" + Math.max(a, b);
+  }
+
+  /**
+   * Sumas que entran al historial / fusión memorizada:
+   * - ambos sumandos entre 1 y 5, o
+   * - un múltiplo de 10 y el otro entre 1 y 10.
+   */
+  function isEasyLearnableAddPair(a, b) {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+    if (a < 1 || b < 1) return false;
+    if (a <= 5 && b <= 5) return true;
+    const hi = Math.max(a, b);
+    const lo = Math.min(a, b);
+    if (hi % 10 === 0 && lo <= 10) return true;
+    return false;
+  }
+
+  function loadLearnedAddPairs() {
+    try {
+      const raw = localStorage.getItem(LEARNED_ADD_SUMS_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr.filter((x) => typeof x === "string"));
+    } catch (e) {
+      return new Set();
+    }
+  }
+
+  function persistLearnedAddPairs(set) {
+    try {
+      localStorage.setItem(LEARNED_ADD_SUMS_KEY, JSON.stringify([...set].sort()));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  const learnedAddPairs = loadLearnedAddPairs();
 
   function mysteryStageFromChallengeIndex(challengeIndex) {
     const phase = Math.floor((challengeIndex - 1) / 3);
@@ -276,6 +320,8 @@
   let drag = null;
   let pendingMerge = null;
   let decomposeAnimating = false;
+  /** Bubble Math Lab parity: skip merge modal for “primitive” pairs only when autofusion is on (this game has no autofusion UI → stays false). */
+  let autoFusionActive = false;
 
   const els = {
     screenStart: document.getElementById("screen-start"),
@@ -510,6 +556,7 @@
   }
 
   function isPrimitiveAutoFuseMerge(b, partner) {
+    if (!autoFusionActive) return false;
     if (isBlockedSubtractionMerge(b, partner)) return false;
     const op = mergeOpForPair(b, partner);
     if (op === "add") {
@@ -522,6 +569,24 @@
       return isPrimitiveSubtractPair(partner.value, b.value);
     }
     return false;
+  }
+
+  /** Fusión sin modal: par de suma ya acertado antes y sigue siendo suma "fácil" (como en Bubble Math Lab). */
+  function isLearnedInstantAddMerge(b, partner) {
+    if (isBlockedSubtractionMerge(b, partner)) return false;
+    const pm = buildMergePayload(b, partner);
+    if (pm.op !== "add") return false;
+    if (!isEasyLearnableAddPair(pm.v1, pm.v2)) return false;
+    return learnedAddPairs.has(canonicalAddPairKey(pm.v1, pm.v2));
+  }
+
+  function rememberLearnedAddFromSuccessfulModal(pm) {
+    if (pm.op !== "add") return;
+    if (!isEasyLearnableAddPair(pm.v1, pm.v2)) return;
+    const k = canonicalAddPairKey(pm.v1, pm.v2);
+    if (learnedAddPairs.has(k)) return;
+    learnedAddPairs.add(k);
+    persistLearnedAddPairs(learnedAddPairs);
   }
 
   function spawnMergeFireworks() {
@@ -834,6 +899,10 @@
         runMergeCore(buildMergePayload(b, partner));
         return true;
       }
+      if (isLearnedInstantAddMerge(b, partner)) {
+        runMergeCore(buildMergePayload(b, partner));
+        return true;
+      }
       openMergeModal(b, partner);
       return true;
     }
@@ -1077,6 +1146,7 @@
     }
     const pm = pendingMerge;
     closeMergeModal();
+    rememberLearnedAddFromSuccessfulModal(pm);
     runMergeCore(pm);
   });
 
