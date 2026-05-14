@@ -6,8 +6,7 @@
   const MAX_SUM = 99;
   const MIN_DECOMPOSE = 5;
   const SCORE_PER_UNIT = 10;
-  /** Expande el área válida para soltar sobre la cajita (px por lado), cómodo en touch. */
-  const MYSTERY_TARGET_INFLATE_PX = 36;
+  const GUIDE_LAST_CHALLENGE_INDEX = 9;
 
   const DIFFICULTY_TIER_2_AT = 400;
   const DIFFICULTY_TIER_3_AT = 1500;
@@ -107,6 +106,32 @@
     };
   }
 
+  /**
+   * Cuenta auxiliar en la mesa (misma idea que Bubble Math Lab).
+   * @param {ReturnType<typeof generateMysteryChallenge>} ch
+   */
+  function deriveWorkspace(ch) {
+    if (ch.mysteryType === "missing_addend") {
+      return {
+        workspaceChallengeOp: /** @type {const} */ ("subtract"),
+        workspaceLeft: ch.expectedResult,
+        workspaceRight: /** @type {number} */ (ch.rightNumber),
+      };
+    }
+    if (ch.mysteryType === "missing_subtrahend") {
+      return {
+        workspaceChallengeOp: "subtract",
+        workspaceLeft: /** @type {number} */ (ch.leftNumber),
+        workspaceRight: ch.expectedResult,
+      };
+    }
+    return {
+      workspaceChallengeOp: "add",
+      workspaceLeft: ch.expectedResult,
+      workspaceRight: /** @type {number} */ (ch.rightNumber),
+    };
+  }
+
   function pickDecadePlusUnits(n) {
     if (!Number.isFinite(n) || n <= 10 || n % 10 === 0) return null;
     const tens = Math.floor(n / 10) * 10;
@@ -130,40 +155,97 @@
     return [tens, ones];
   }
 
-  function decomposePartsForMysteryBubble(b) {
-    if (!state.mysteryType) return null;
-    if (state.mysteryType === "missing_addend") {
-      if (
-        b.value === state.expectedResult &&
-        state.rightNumber != null &&
-        state.hiddenValue != null
-      ) {
-        const p = [state.rightNumber, state.hiddenValue].sort((x, y) => x - y);
-        return [p[0], p[1]];
+  function pickComplementTenSplit(n, otherValues) {
+    if (!Number.isFinite(n) || n < 2 || !otherValues || otherValues.length === 0) return null;
+    let bestPair = /** @type {null | [number, number]} */ (null);
+    let bestLeftover = Infinity;
+    let bestV = -1;
+    const seen = new Set();
+    for (const v of otherValues) {
+      if (!Number.isFinite(v) || v < 1 || v > 9) continue;
+      if (seen.has(v)) continue;
+      seen.add(v);
+      const g = 10 - v;
+      if (g < 1 || g > n - 1) continue;
+      const leftover = n - g;
+      if (leftover < 1) continue;
+      if (leftover < bestLeftover || (leftover === bestLeftover && v > bestV)) {
+        bestLeftover = leftover;
+        bestV = v;
+        const a = Math.min(g, leftover);
+        const b = Math.max(g, leftover);
+        bestPair = [a, b];
       }
-      return null;
     }
-    if (state.mysteryType === "missing_subtrahend") {
-      if (b.value === state.leftNumber && state.expectedResult != null && state.hiddenValue != null) {
-        const p = [state.expectedResult, state.hiddenValue].sort((x, y) => x - y);
-        return [p[0], p[1]];
+    return bestPair;
+  }
+
+  function pickTenPlusWhenMultipleOfTenOnBoard(n, otherValues) {
+    if (!Number.isFinite(n) || n <= 10 || !otherValues || otherValues.length === 0) return null;
+    let hasMultipleOfTen = false;
+    for (const v of otherValues) {
+      if (Number.isFinite(v) && v > 0 && v % 10 === 0) {
+        hasMultipleOfTen = true;
+        break;
       }
-      return null;
     }
-    return null;
+    if (!hasMultipleOfTen) return null;
+    const rest = n - 10;
+    if (rest < 1) return null;
+    const lo = Math.min(10, rest);
+    const hi = Math.max(10, rest);
+    return [lo, hi];
   }
 
   function decomposePartsForBubble(b) {
-    const m = decomposePartsForMysteryBubble(b);
-    if (m) return m;
-    const du = pickDecadePlusUnits(b.value);
-    if (du) return du;
-    return decomposePartsClassic(b.value);
+    const n = b.value;
+    const decadeUnits = pickDecadePlusUnits(n);
+    if (decadeUnits) return decadeUnits;
+
+    const others = [];
+    if (state.workspaceChallengeOp === "add") {
+      for (const o of state.bubbles) {
+        if (o.id === b.id) continue;
+        if (o.source !== "addend") continue;
+        others.push(o.value);
+      }
+    } else if (b.source === "minuend") {
+      for (const o of state.bubbles) {
+        if (o.id === b.id) continue;
+        if (o.source !== "minuend") continue;
+        others.push(o.value);
+      }
+    }
+    const canFriend =
+      state.workspaceChallengeOp === "add" ||
+      (state.workspaceChallengeOp === "subtract" && b.source === "minuend");
+    if (canFriend && others.length > 0) {
+      const tenPlus = pickTenPlusWhenMultipleOfTenOnBoard(n, others);
+      if (tenPlus) return tenPlus;
+      const friend = pickComplementTenSplit(n, others);
+      if (friend) return friend;
+    }
+    return decomposePartsClassic(n);
+  }
+
+  function isPrimitiveAddPair(a, b) {
+    if (a === 1 && b === 1) return true;
+    if ((a === 5 && b <= 5 && b >= 1) || (b === 5 && a <= 5 && a >= 1)) return true;
+    if ((a === 10 && b <= 10 && b >= 1) || (b === 10 && a <= 10 && a >= 1)) return true;
+    if (a <= 5 && b <= 5 && a >= 1 && b >= 1) return true;
+    return false;
+  }
+
+  function isPrimitiveSubtractPair(minuendVal, subVal) {
+    if (minuendVal < subVal || subVal < 1) return false;
+    return minuendVal <= 10 && subVal <= 10;
   }
 
   /** @type {{
    *   score: number,
    *   challengeIndex: number,
+   *   guideStep: number,
+   *   numericHintRevealed: boolean,
    *   mysteryType: null | 'missing_addend' | 'missing_subtrahend' | 'missing_minuend',
    *   challengeOp: 'add' | 'subtract',
    *   leftNumber: number | null,
@@ -171,11 +253,16 @@
    *   expectedResult: number,
    *   hiddenValue: number | null,
    *   hiddenPosition: null | 'left' | 'right',
+   *   workspaceChallengeOp: 'add' | 'subtract',
+   *   workspaceLeft: number,
+   *   workspaceRight: number,
    *   bubbles: Array<{ id: string, value: number, x: number, y: number, source: 'addend' | 'minuend' | 'subtrahend' }>,
    * }} */
   const state = {
     score: 0,
     challengeIndex: 1,
+    guideStep: 0,
+    numericHintRevealed: false,
     mysteryType: null,
     challengeOp: "add",
     leftNumber: null,
@@ -183,6 +270,9 @@
     expectedResult: 8,
     hiddenValue: null,
     hiddenPosition: null,
+    workspaceChallengeOp: "subtract",
+    workspaceLeft: 8,
+    workspaceRight: 4,
     bubbles: [],
   };
 
@@ -198,6 +288,8 @@
     btnHome: document.getElementById("btn-home"),
     btnReset: document.getElementById("btn-reset"),
     btnNew: document.getElementById("btn-new"),
+    btnHint: document.getElementById("btn-hint"),
+    btnGuideNext: document.getElementById("btn-guide-next"),
     btnMysteryHelp: document.getElementById("btn-mystery-help"),
     hudScore: document.getElementById("hud-score"),
     hudChallenge: document.getElementById("hud-challenge"),
@@ -208,13 +300,13 @@
     eqResult: document.getElementById("eq-result"),
     helpPrimary: document.getElementById("help-primary"),
     helpSecondary: document.getElementById("help-secondary"),
+    workspaceGoal: document.getElementById("workspace-goal"),
     playArea: document.getElementById("play-area"),
-    playSurface: document.getElementById("play-surface"),
-    mysteryTarget: document.getElementById("mystery-target"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
     mergeModal: document.getElementById("modal-merge"),
+    mergeTitle: document.getElementById("modal-merge-title"),
     mergePrompt: document.getElementById("modal-merge-prompt"),
     mergeHint: document.getElementById("modal-merge-hint"),
     mergeForm: document.getElementById("form-merge"),
@@ -223,12 +315,16 @@
     confetti: document.getElementById("confetti-root"),
   };
 
-  function bubblesHostEl() {
-    return els.playSurface || els.playArea;
+  function prefersReducedMotion() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function isGuidedChallenge() {
+    return state.challengeIndex <= GUIDE_LAST_CHALLENGE_INDEX;
   }
 
   function playAreaRect() {
-    return bubblesHostEl().getBoundingClientRect();
+    return els.playArea.getBoundingClientRect();
   }
 
   function showScreen(name) {
@@ -241,11 +337,16 @@
     }
   }
 
+  function syncGuideUi() {
+    const show = isGuidedChallenge() && state.guideStep < 2;
+    els.btnGuideNext.hidden = !show;
+  }
+
   function syncStageHud() {
     const labels = {
-      missing_addend: "Parte que falta",
-      missing_subtrahend: "Lo que se fue",
-      missing_minuend: "Número al inicio",
+      missing_addend: "Cajita en suma",
+      missing_subtrahend: "Cajita en resta (lo quitado)",
+      missing_minuend: "Cajita al inicio",
     };
     const tier = tierFromScore(state.score);
     const tierName = tier === 1 ? "Fácil" : tier === 2 ? "Medio" : "Avanzado";
@@ -266,45 +367,95 @@
     syncStageHud();
   }
 
-  function buildHelpPrimary() {
-    if (state.mysteryType === "missing_addend") {
-      return (
-        "Cajita + " +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        ". Encontrá la parte que falta."
-      );
+  function formatWorkspaceEquation() {
+    const L = state.workspaceLeft;
+    const R = state.workspaceRight;
+    if (state.workspaceChallengeOp === "subtract") {
+      return L + " − " + R + " = " + (L - R);
     }
-    if (state.mysteryType === "missing_subtrahend") {
-      return (
-        state.leftNumber +
-        " − cajita = " +
-        state.expectedResult +
-        ". Encontrá lo que se fue."
-      );
-    }
-    if (state.mysteryType === "missing_minuend") {
-      return (
-        "Cajita − " +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        ". Reconstruí el número inicial."
-      );
-    }
-    return "Encontrá el número de la cajita.";
+    return L + " + " + R + " = " + (L + R);
   }
 
-  function buildHelpSecondary() {
+  function formatWorkspaceTask() {
+    const L = state.workspaceLeft;
+    const R = state.workspaceRight;
+    return state.workspaceChallengeOp === "subtract" ? L + " − " + R : L + " + " + R;
+  }
+
+  function syncWorkspaceGoalText() {
+    const h = state.hiddenValue;
+    els.workspaceGoal.textContent =
+      "Objetivo en la mesa: una sola burbuja con " +
+      (h != null ? h : "?") +
+      " (el número de la cajita).";
+  }
+
+  function procedureExplanation() {
     if (state.mysteryType === "missing_addend") {
-      return "Podés partir el total tocando la burbuja del total (sin arrastrar).";
+      return (
+        "Paso 1 — Procedimiento: en una suma con cajita, el número escondido es lo que falta " +
+        "para llegar al total. Para encontrarlo, en la mesa restás el número conocido del total."
+      );
     }
     if (state.mysteryType === "missing_subtrahend") {
-      return "Partí el número grande tocando su burbuja para ver el resto y lo que se quitó.";
+      return (
+        "Paso 1 — Procedimiento: si la cajita es lo que se quitó en una resta, pensá " +
+        "«grande − lo que quedó» → en la mesa restás el resultado del número grande."
+      );
     }
     if (state.mysteryType === "missing_minuend") {
-      return "Juntá las dos burbujas para formar el número que había al principio.";
+      return (
+        "Paso 1 — Procedimiento: si la cajita es el primer número de la resta, el comienzo " +
+        "es lo que quedó más lo que se quitó → en la mesa sumás esas dos piezas."
+      );
+    }
+    return "";
+  }
+
+  function mechanicsReminder() {
+    return (
+      "Paso 3 — En la mesa: tocá una burbuja sin arrastrar para partirla; arrastrá " +
+      "una burbuja sobre otra para juntar (como en Bubble Math Lab). Cuando quede solo una " +
+      "con el número de la cajita, ganás."
+    );
+  }
+
+  function buildPrimaryHelp() {
+    if (isGuidedChallenge()) {
+      if (state.guideStep === 0) return procedureExplanation();
+      if (state.guideStep === 1) {
+        return (
+          "Paso 2 — Cuenta en la mesa: resolvé " +
+          formatWorkspaceTask() +
+          " (tocá Pista si querés verla remarcada abajo)."
+        );
+      }
+      return mechanicsReminder();
+    }
+    let short = "";
+    if (state.mysteryType === "missing_addend") {
+      short = "Cajita en suma: en la mesa restá el número conocido del total.";
+    } else if (state.mysteryType === "missing_subtrahend") {
+      short = "Cajita «lo quitado»: en la mesa restá el resultado del número grande.";
+    } else if (state.mysteryType === "missing_minuend") {
+      short = "Cajita al inicio: en la mesa sumá lo que quedó con lo que se quitó.";
+    }
+    return short + " Tocá Pista para ver la cuenta exacta.";
+  }
+
+  function buildHintStickyLine() {
+    return (
+      "Pista — Resolvé en la mesa: " +
+      formatWorkspaceTask() +
+      " → da " +
+      state.hiddenValue +
+      " (la cajita)."
+    );
+  }
+
+  function buildSecondaryDefault() {
+    if (state.numericHintRevealed || (isGuidedChallenge() && state.guideStep >= 1)) {
+      return buildHintStickyLine();
     }
     return "";
   }
@@ -322,18 +473,24 @@
 
   function updateHelpBanner() {
     if (!els.helpPrimary || els.screenGame.hidden) return;
-    els.helpPrimary.textContent = buildHelpPrimary();
-    const sec = buildHelpSecondary();
-    if (helpStickySecondary) {
-      els.helpSecondary.textContent = helpStickySecondary;
+    els.helpPrimary.textContent = buildPrimaryHelp();
+    const explicit = helpStickySecondary;
+    const def = buildSecondaryDefault();
+    if (explicit) {
+      els.helpSecondary.textContent = explicit;
       els.helpSecondary.hidden = false;
-      els.helpSecondary.classList.remove("help-banner__secondary--muted");
+      els.helpSecondary.classList.remove("help-banner__secondary--muted", "help-banner__secondary--text");
       els.helpSecondary.classList.add("help-banner__secondary--alert");
+    } else if (def.length > 0) {
+      els.helpSecondary.textContent = def;
+      els.helpSecondary.hidden = false;
+      els.helpSecondary.classList.remove("help-banner__secondary--muted", "help-banner__secondary--alert");
+      els.helpSecondary.classList.add("help-banner__secondary--text");
     } else {
-      els.helpSecondary.textContent = sec;
-      els.helpSecondary.hidden = sec.length === 0;
+      els.helpSecondary.textContent = "";
+      els.helpSecondary.hidden = true;
       els.helpSecondary.classList.add("help-banner__secondary--muted");
-      els.helpSecondary.classList.remove("help-banner__secondary--alert");
+      els.helpSecondary.classList.remove("help-banner__secondary--alert", "help-banner__secondary--text");
     }
   }
 
@@ -341,6 +498,7 @@
     if (!resetIndex) state.challengeIndex += 1;
     const tier = tierFromScore(state.score);
     const ch = generateMysteryChallenge(tier, state.challengeIndex);
+    const ws = deriveWorkspace(ch);
     state.mysteryType = ch.mysteryType;
     state.challengeOp = ch.challengeOp;
     state.leftNumber = ch.leftNumber;
@@ -348,80 +506,41 @@
     state.expectedResult = ch.expectedResult;
     state.hiddenValue = ch.hiddenValue;
     state.hiddenPosition = ch.hiddenPosition;
+    state.workspaceChallengeOp = ws.workspaceChallengeOp;
+    state.workspaceLeft = ws.workspaceLeft;
+    state.workspaceRight = ws.workspaceRight;
   }
 
-  function initialMysteryBubbleLayout() {
-    const t = state.mysteryType;
-    if (t === "missing_addend") {
-      return [
-        {
-          id: nextId(),
-          value: /** @type {number} */ (state.rightNumber),
-          x: 28,
-          y: 36,
-          source: /** @type {const} */ ("addend"),
-        },
-        {
-          id: nextId(),
-          value: state.expectedResult,
-          x: 72,
-          y: 36,
-          source: "addend",
-        },
-      ];
-    }
-    if (t === "missing_subtrahend") {
-      return [
-        {
-          id: nextId(),
-          value: /** @type {number} */ (state.leftNumber),
-          x: 28,
-          y: 36,
-          source: "minuend",
-        },
-        {
-          id: nextId(),
-          value: state.expectedResult,
-          x: 72,
-          y: 36,
-          source: "minuend",
-        },
-      ];
-    }
-    if (t === "missing_minuend") {
-      return [
-        {
-          id: nextId(),
-          value: /** @type {number} */ (state.rightNumber),
-          x: 28,
-          y: 36,
-          source: "subtrahend",
-        },
-        {
-          id: nextId(),
-          value: state.expectedResult,
-          x: 72,
-          y: 36,
-          source: "minuend",
-        },
-      ];
-    }
-    return [];
+  function initialWorkspaceBubbleLayout() {
+    const isSub = state.workspaceChallengeOp === "subtract";
+    return [
+      {
+        id: nextId(),
+        value: state.workspaceLeft,
+        x: 28,
+        y: 38,
+        source: isSub ? "minuend" : "addend",
+      },
+      {
+        id: nextId(),
+        value: state.workspaceRight,
+        x: 72,
+        y: 38,
+        source: isSub ? "subtrahend" : "addend",
+      },
+    ];
   }
 
   function startChallenge(resetIndex) {
     closeMergeModal();
     clearHelpStickySecondary();
-    if (els.mysteryTarget) {
-      els.mysteryTarget.classList.remove(
-        "mystery-target--wrong",
-        "mystery-target--success",
-        "mystery-target--active"
-      );
-    }
+    state.guideStep = 0;
+    state.numericHintRevealed = false;
     stageChallengePayload(resetIndex);
-    state.bubbles = initialMysteryBubbleLayout();
+    state.bubbles = initialWorkspaceBubbleLayout();
     syncEquation();
+    syncWorkspaceGoalText();
+    syncGuideUi();
     renderBubbles();
     updateHelpBanner();
   }
@@ -429,14 +548,7 @@
   function resetTurn() {
     closeMergeModal();
     clearHelpStickySecondary();
-    if (els.mysteryTarget) {
-      els.mysteryTarget.classList.remove(
-        "mystery-target--wrong",
-        "mystery-target--success",
-        "mystery-target--active"
-      );
-    }
-    state.bubbles = initialMysteryBubbleLayout();
+    state.bubbles = initialWorkspaceBubbleLayout();
     renderBubbles();
     updateHelpBanner();
   }
@@ -450,7 +562,11 @@
   }
 
   function clearBubbleEls() {
-    bubblesHostEl().querySelectorAll(".bubble").forEach((n) => n.remove());
+    els.playArea.querySelectorAll(".bubble").forEach((n) => n.remove());
+  }
+
+  function pxFromPercent(pxW, pxH, xPct, yPct) {
+    return { x: (xPct / 100) * pxW, y: (yPct / 100) * pxH };
   }
 
   function placeBubbleEl(el, xPct, yPct) {
@@ -459,8 +575,7 @@
   }
 
   function mergeOpForPair(b, partner) {
-    if (state.mysteryType === "missing_minuend") return "add";
-    if (state.challengeOp !== "subtract") return "add";
+    if (state.workspaceChallengeOp !== "subtract") return "add";
     const aMin = b.source === "minuend";
     const bMin = partner.source === "minuend";
     const aSub = b.source === "subtrahend";
@@ -487,14 +602,14 @@
   }
 
   function buildMergePayload(b, partner) {
+    const nx = (b.x + partner.x) / 2;
+    const ny = (b.y + partner.y) / 2;
     const mergeOp = mergeOpForPair(b, partner);
     let result;
     let scoreBasis;
-    let nx = (b.x + partner.x) / 2;
-    let ny = (b.y + partner.y) / 2;
     if (mergeOp === "add") {
       result = b.value + partner.value;
-      scoreBasis = Math.max(b.value, partner.value);
+      scoreBasis = result;
     } else {
       let minuendVal;
       let subVal;
@@ -523,22 +638,56 @@
     };
   }
 
-  /** Fusión simple sin modal para no frenar el foco en la cajita (plan 7.3). */
   function isPrimitiveAutoFuseMerge(b, partner) {
-    if (mergeOpForPair(b, partner) !== "add") return false;
-    const a = b.value;
-    const c = partner.value;
-    if (a < 1 || c < 1) return false;
-    return a <= 10 && c <= 10 && a + c <= 24;
+    if (isBlockedSubtractionMerge(b, partner)) return false;
+    const op = mergeOpForPair(b, partner);
+    if (op === "add") {
+      return isPrimitiveAddPair(b.value, partner.value);
+    }
+    if (b.source === "minuend" && partner.source === "subtrahend") {
+      return isPrimitiveSubtractPair(b.value, partner.value);
+    }
+    if (b.source === "subtrahend" && partner.source === "minuend") {
+      return isPrimitiveSubtractPair(partner.value, b.value);
+    }
+    return false;
+  }
+
+  function spawnMergeFireworks() {
+    const rect = document.body.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height * 0.42;
+    const colors = ["#7cffdf", "#fde047", "#f472b6", "#c084fc", "#38bdf8", "#ffffff"];
+    const waves = 2;
+    const perWave = 28;
+    for (let w = 0; w < waves; w += 1) {
+      window.setTimeout(() => {
+        for (let i = 0; i < perWave; i += 1) {
+          const p = document.createElement("span");
+          p.className = "firework-ray";
+          p.style.left = cx + (Math.random() * 24 - 12) + "px";
+          p.style.top = cy + (Math.random() * 24 - 12) + "px";
+          p.style.background = colors[i % colors.length];
+          const ang = (Math.PI * 2 * i) / perWave + Math.random() * 0.2;
+          const dist = 90 + Math.random() * 130;
+          p.style.setProperty("--fw-dx", Math.cos(ang) * dist + "px");
+          p.style.setProperty("--fw-dy", Math.sin(ang) * dist + "px");
+          p.style.animationDuration = 0.85 + Math.random() * 0.2 + "s";
+          els.confetti.appendChild(p);
+          window.setTimeout(() => p.remove(), 1200);
+        }
+      }, w * 120);
+    }
   }
 
   function runMergeCore(pm) {
+    clearHelpStickySecondary();
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
     let newSource;
     if (pm.op === "subtract") {
       newSource = "minuend";
-    } else if (state.challengeOp === "subtract") {
+    } else if (state.workspaceChallengeOp === "subtract") {
       newSource =
         pm.sourceA === "subtrahend" && pm.sourceB === "subtrahend" ? "subtrahend" : "minuend";
     } else {
@@ -552,16 +701,52 @@
       source: newSource,
     });
     renderBubbles();
+    spawnMergeFireworks();
   }
 
-  function createBubbleEl(b) {
+  function bubbleEligibleForMergeHint(b) {
+    if (state.workspaceChallengeOp === "subtract" && b.source === "subtrahend") return false;
+    return true;
+  }
+
+  function computeMergeHintStats(bubbles) {
+    let tens = 0;
+    let has5 = false;
+    let small = 0;
+    for (const b of bubbles) {
+      if (!bubbleEligibleForMergeHint(b)) continue;
+      const v = b.value;
+      if (v > 0 && v % 10 === 0) tens += 1;
+      if (v === 5) has5 = true;
+      if (v >= 1 && v < 5) small += 1;
+    }
+    return {
+      multiTens: tens >= 2,
+      fiveAndSmall: has5 && small >= 1,
+    };
+  }
+
+  function mergeHintClassForBubble(b, stats) {
+    if (!bubbleEligibleForMergeHint(b)) return "";
+    const v = b.value;
+    if (stats.multiTens && v > 0 && v % 10 === 0) return " bubble--hint-priority";
+    if (!stats.multiTens && stats.fiveAndSmall && (v === 5 || (v >= 1 && v < 5))) {
+      return " bubble--hint-secondary";
+    }
+    return "";
+  }
+
+  function createBubbleEl(b, hintStats) {
     const el = document.createElement("div");
-    el.className = "bubble" + (b.source === "subtrahend" ? " bubble--subtrahend" : "");
+    el.className =
+      "bubble" +
+      (b.source === "subtrahend" ? " bubble--subtrahend" : "") +
+      mergeHintClassForBubble(b, hintStats);
     el.dataset.id = b.id;
     el.setAttribute("role", "button");
     el.setAttribute(
       "aria-label",
-      (b.source === "subtrahend" ? "Pieza roja, valor " : "Burbuja valor ") + b.value
+      b.source === "subtrahend" ? "Sustraendo, valor " + b.value : "Burbuja valor " + b.value
     );
     const inner = document.createElement("span");
     inner.className = "bubble__inner";
@@ -569,20 +754,26 @@
     el.appendChild(inner);
     placeBubbleEl(el, b.x, b.y);
     el.addEventListener("pointerdown", onBubblePointerDown);
-    bubblesHostEl().appendChild(el);
+    els.playArea.appendChild(el);
     return el;
+  }
+
+  function checkPuzzleCompleteAuto() {
+    if (els.screenGame.hidden) return;
+    if (!els.modal.hidden || !els.mergeModal.hidden) return;
+    if (state.bubbles.length !== 1) return;
+    if (state.hiddenValue == null || state.bubbles[0].value !== state.hiddenValue) return;
+    openSuccessModal();
   }
 
   function renderBubbles() {
     clearBubbleEls();
+    const hintStats = computeMergeHintStats(state.bubbles);
     for (const b of state.bubbles) {
-      createBubbleEl(b);
+      createBubbleEl(b, hintStats);
     }
+    checkPuzzleCompleteAuto();
     updateHelpBanner();
-  }
-
-  function pxFromPercent(pxW, pxH, xPct, yPct) {
-    return { x: (xPct / 100) * pxW, y: (yPct / 100) * pxH };
   }
 
   function bubbleCenterClient(b) {
@@ -591,26 +782,23 @@
     return { x: r.left + p.x, y: r.top + p.y };
   }
 
-  function distance(u, v) {
-    return Math.hypot(u.x - v.x, u.y - v.y);
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
   function openMergeModal(b, partner) {
     const pm = buildMergePayload(b, partner);
     pendingMerge = pm;
-    if (pm.op === "add") {
-      els.mergePrompt.textContent = pm.v1 + " + " + pm.v2 + " = ?";
-    } else {
-      const line =
-        b.source === "minuend" && partner.source === "subtrahend"
+    const promptText =
+      pm.op === "add"
+        ? pm.v1 + " + " + pm.v2
+        : b.source === "minuend" && partner.source === "subtrahend"
           ? b.value + " − " + partner.value
           : partner.value + " − " + b.value;
-      els.mergePrompt.textContent = line + " = ?";
-    }
+    els.mergeTitle.textContent = pm.op === "subtract" ? "Restar burbujas" : "Sumar burbujas";
+    els.mergePrompt.textContent = promptText + " = ?";
     els.mergeHint.textContent =
-      pm.op === "add"
-        ? "Escribí el resultado. Si acertás, las burbujas se juntan."
-        : "Escribí el resultado de la resta. Si acertás, las burbujas se juntan.";
+      "Escribí el resultado numérico. Si acertás, la fusión se completa (como en Bubble Math Lab).";
     els.mergeAnswer.value = "";
     els.mergeFeedback.hidden = true;
     els.mergeModal.hidden = false;
@@ -627,51 +815,86 @@
     els.mergeAnswer.value = "";
   }
 
+  function applyEmergeFromSplit(parentX, parentY, childIds) {
+    const r = playAreaRect();
+    const w = r.width;
+    const h = r.height;
+    for (const id of childIds) {
+      const b = findBubble(id);
+      if (!b) continue;
+      const el = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      if (!el) continue;
+      const fromX = ((parentX - b.x) / 100) * w;
+      const fromY = ((parentY - b.y) / 100) * h;
+      el.style.setProperty("--split-from-x", fromX + "px");
+      el.style.setProperty("--split-from-y", fromY + "px");
+      el.classList.add("bubble--emerge");
+      el.addEventListener(
+        "animationend",
+        (e) => {
+          const name = e.animationName || "";
+          if (!name.includes("bubble-emerge-from-split")) return;
+          el.classList.remove("bubble--emerge");
+          el.style.removeProperty("--split-from-x");
+          el.style.removeProperty("--split-from-y");
+        },
+        { once: true }
+      );
+    }
+  }
+
+  function finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2) {
+    removeBubbleById(b.id);
+    state.bubbles.push(
+      { id: id1, value: v1, x: x1, y: y1, source: b.source },
+      { id: id2, value: v2, x: x2, y: y2, source: b.source }
+    );
+    renderBubbles();
+    if (!prefersReducedMotion()) {
+      applyEmergeFromSplit(ox, oy, [id1, id2]);
+    }
+    decomposeAnimating = false;
+  }
+
   function spawnSplitParticles(bubbleEl) {
     const br = bubbleEl.getBoundingClientRect();
     const pr = playAreaRect();
     const cx = br.left + br.width / 2 - pr.left;
     const cy = br.top + br.height / 2 - pr.top;
     const colors = ["#7cffdf", "#c084fc", "#fef08a", "#fff", "#38bdf8"];
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
       const p = document.createElement("span");
       p.className = "split-particle";
       p.style.left = cx + "px";
       p.style.top = cy + "px";
-      const ang = (Math.PI * 2 * i) / 12 + Math.random() * 0.3;
-      const dist = 28 + Math.random() * 36;
+      const ang = (Math.PI * 2 * i) / 14 + Math.random() * 0.35;
+      const dist = 32 + Math.random() * 44;
       p.style.setProperty("--split-dx", Math.cos(ang) * dist + "px");
       p.style.setProperty("--split-dy", Math.sin(ang) * dist + "px");
       p.style.background = colors[i % colors.length];
-      bubblesHostEl().appendChild(p);
-      window.setTimeout(() => p.remove(), 600);
+      els.playArea.appendChild(p);
+      window.setTimeout(() => p.remove(), 650);
     }
-  }
-
-  function finalizeDecompose(b, v1, v2, x1, y1, x2, y2) {
-    removeBubbleById(b.id);
-    state.bubbles.push(
-      { id: nextId(), value: v1, x: x1, y: y1, source: b.source },
-      { id: nextId(), value: v2, x: x2, y: y2, source: b.source }
-    );
-    renderBubbles();
-    decomposeAnimating = false;
   }
 
   function decomposeBlockedMessage(value) {
     if (value < MIN_DECOMPOSE) {
-      return "Esa pieza es muy chica para partir. Probá juntarla con otra.";
+      return (
+        "Los números menores que " +
+        MIN_DECOMPOSE +
+        " no se parten acá. Juntalos con otra burbuja."
+      );
     }
     if (value === 5) {
-      return "El 5 es una pieza especial acá. Juntalo con otra burbuja.";
+      return "El 5 es pieza base. Combiná con otra burbuja.";
     }
-    return "Esta burbuja no se puede partir más.";
+    return "Esa burbuja no se puede partir más. Juntala con otra.";
   }
 
   function tryDecompose(b) {
     const parts = decomposePartsForBubble(b);
     if (!parts) {
-      const bel = bubblesHostEl().querySelector('.bubble[data-id="' + b.id + '"]');
+      const bel = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
       if (bel) {
         bel.classList.remove("bubble--shake");
         void bel.offsetWidth;
@@ -684,16 +907,53 @@
     const [v1, v2] = parts;
     const ox = b.x;
     const oy = b.y;
-    const x1 = Math.max(8, ox - 12);
-    const y1 = Math.min(84, oy + 8);
-    const x2 = Math.min(92, ox + 12);
-    const y2 = y1;
+    const x1 = Math.max(6, ox - 10);
+    const y1 = Math.min(86, oy + 6);
+    const x2 = Math.min(94, ox + 10);
+    const y2 = Math.min(86, oy + 6);
     const id1 = nextId();
     const id2 = nextId();
-    const el = bubblesHostEl().querySelector('.bubble[data-id="' + b.id + '"]');
-    if (el) spawnSplitParticles(el);
+    const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+    if (!el || prefersReducedMotion()) {
+      decomposeAnimating = true;
+      finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
+      return;
+    }
     decomposeAnimating = true;
-    finalizeDecompose(b, v1, v2, x1, y1, x2, y2);
+    spawnSplitParticles(el);
+    el.classList.add("bubble--splitting");
+    let finalized = false;
+    const run = () => {
+      if (finalized) return;
+      finalized = true;
+      finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
+    };
+    const tid = window.setTimeout(run, 580);
+    el.addEventListener(
+      "animationend",
+      (e) => {
+        if (e.target !== el) return;
+        const name = e.animationName || "";
+        if (!name.includes("bubble-splitting")) return;
+        window.clearTimeout(tid);
+        run();
+      },
+      { once: true }
+    );
+  }
+
+  function feedbackBlockedSubtraction(b, partner) {
+    setHelpStickySecondary(
+      "No podés restar si el minuendo es más chico que el sustraendo rojo. Partí el celeste o sumá antes."
+    );
+    for (const id of [b.id, partner.id]) {
+      const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      if (bel) {
+        bel.classList.remove("bubble--shake");
+        void bel.offsetWidth;
+        bel.classList.add("bubble--shake");
+      }
+    }
   }
 
   function tryMergeOrPlace(b, el, centerX, centerY, dragState) {
@@ -716,9 +976,7 @@
           b.y = dragState.origY;
           if (el) placeBubbleEl(el, b.x, b.y);
         }
-        setHelpStickySecondary(
-          "No podés restar si la pieza celeste es más chica que la roja. Sumá primero o usá una pieza mayor."
-        );
+        feedbackBlockedSubtraction(b, partner);
         return true;
       }
       if (isPrimitiveAutoFuseMerge(b, partner)) {
@@ -731,100 +989,42 @@
     return false;
   }
 
-  function isPointInsideMysteryTarget(clientX, clientY) {
-    const target = els.mysteryTarget;
-    if (!target || els.screenGame.hidden) return false;
-    const r = target.getBoundingClientRect();
-    const pad = MYSTERY_TARGET_INFLATE_PX;
-    return (
-      clientX >= r.left - pad &&
-      clientX <= r.right + pad &&
-      clientY >= r.top - pad &&
-      clientY <= r.bottom + pad
-    );
-  }
-
-  function showMysteryWrongFeedback(bubbleEl) {
-    let msg = "Todavía no. Probá con otra pieza o partí las burbujas.";
-    if (state.mysteryType === "missing_addend") {
-      msg = "Todavía no. Pensá qué número falta para llegar al total.";
-    } else if (state.mysteryType === "missing_subtrahend") {
-      msg = "Casi. La cajita es lo que se quitó.";
-    } else if (state.mysteryType === "missing_minuend") {
-      msg = "Recordá: el número al inicio es lo que quedó más lo que se quitó.";
-    }
-    setHelpStickySecondary(msg);
-    if (els.mysteryTarget) {
-      els.mysteryTarget.classList.remove("mystery-target--wrong");
-      void els.mysteryTarget.offsetWidth;
-      els.mysteryTarget.classList.add("mystery-target--wrong");
-    }
-    if (bubbleEl) {
-      bubbleEl.classList.remove("bubble--shake");
-      void bubbleEl.offsetWidth;
-      bubbleEl.classList.add("bubble--shake");
-    }
-  }
-
   function mysterySuccessMessage() {
+    const line = formatWorkspaceEquation();
     const h = state.hiddenValue;
     if (state.mysteryType === "missing_addend") {
       return (
-        "¡Genial! La cajita era " +
+        "La cajita era " +
         h +
-        ". " +
-        h +
-        " + " +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        "."
+        " porque " +
+        line +
+        " (lo que falta en la suma)."
       );
     }
     if (state.mysteryType === "missing_subtrahend") {
-      return (
-        "¡Bien! Se fueron " +
-        h +
-        ". " +
-        state.leftNumber +
-        " − " +
-        h +
-        " = " +
-        state.expectedResult +
-        "."
-      );
+      return "La cajita era " + h + " porque " + line + " (lo que se quitó).";
     }
     if (state.mysteryType === "missing_minuend") {
-      return (
-        "¡Genial! Al principio había " +
-        h +
-        ". " +
-        h +
-        " − " +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        "."
-      );
+      return "La cajita era " + h + " porque " + line + " (el número del inicio).";
     }
-    return "¡Encontraste el número de la cajita!";
+    return "¡Resolviste la cuenta de la cajita!";
   }
 
   function spawnConfetti() {
     els.confetti.innerHTML = "";
     const colors = ["#7cffdf", "#c084fc", "#fde047", "#f472b6"];
     const rect = document.body.getBoundingClientRect();
-    for (let i = 0; i < 32; i += 1) {
+    for (let i = 0; i < 36; i += 1) {
       const p = document.createElement("span");
       p.className = "confetti-piece";
       p.style.left = Math.random() * rect.width + "px";
-      p.style.top = -16 + Math.random() * 30 + "px";
+      p.style.top = -20 + Math.random() * 40 + "px";
       p.style.background = colors[i % colors.length];
       els.confetti.appendChild(p);
     }
     window.setTimeout(() => {
       els.confetti.innerHTML = "";
-    }, 2000);
+    }, 2200);
   }
 
   function openSuccessModal() {
@@ -836,45 +1036,9 @@
     spawnConfetti();
   }
 
-  function tryPlaceOnMysteryTarget(b, bubbleEl, dragState) {
-    clearHelpStickySecondary();
-    if (state.hiddenValue != null && b.value === state.hiddenValue) {
-      removeBubbleById(b.id);
-      renderBubbles();
-      if (els.mysteryTarget) {
-        els.mysteryTarget.classList.remove("mystery-target--wrong");
-        els.mysteryTarget.classList.add("mystery-target--success");
-      }
-      openSuccessModal();
-      window.setTimeout(() => {
-        if (els.mysteryTarget) els.mysteryTarget.classList.remove("mystery-target--success");
-      }, 700);
-      return;
-    }
-    b.x = dragState.origX;
-    b.y = dragState.origY;
-    if (bubbleEl) placeBubbleEl(bubbleEl, b.x, b.y);
-    showMysteryWrongFeedback(bubbleEl);
-  }
-
-  function clearMysteryHelpHighlights() {
-    bubblesHostEl().querySelectorAll(".bubble--mystery-help").forEach((n) => {
-      n.classList.remove("bubble--mystery-help");
-    });
-  }
-
-  function highlightMysteryBubbles(pred) {
-    for (const bb of state.bubbles) {
-      if (!pred(bb)) continue;
-      const bel = bubblesHostEl().querySelector('.bubble[data-id="' + bb.id + '"]');
-      if (bel) bel.classList.add("bubble--mystery-help");
-    }
-  }
-
   function onBubblePointerDown(ev) {
     if (!els.mergeModal.hidden) return;
     clearHelpStickySecondary();
-    clearMysteryHelpHighlights();
     const el = ev.currentTarget;
     const b = findBubble(el.dataset.id);
     if (!b) return;
@@ -895,16 +1059,20 @@
   }
 
   function moveBubbleToClient(el, b, clientX, clientY, grabOffset) {
-    const box = playAreaRect();
-    const lx = clientX - grabOffset.x - box.left;
-    const ly = clientY - grabOffset.y - box.top;
-    b.x = Math.min(96, Math.max(4, (lx / box.width) * 100));
-    b.y = Math.min(88, Math.max(10, (ly / box.height) * 100));
+    const r = playAreaRect();
+    const cx = clientX - grabOffset.x;
+    const cy = clientY - grabOffset.y;
+    const lx = cx - r.left;
+    const ly = cy - r.top;
+    const nx = (lx / r.width) * 100;
+    const ny = (ly / r.height) * 100;
+    b.x = Math.min(96, Math.max(4, nx));
+    b.y = Math.min(92, Math.max(8, ny));
     placeBubbleEl(el, b.x, b.y);
   }
 
   function clearMergeHighlights() {
-    bubblesHostEl().querySelectorAll(".bubble--merge-target").forEach((n) => {
+    els.playArea.querySelectorAll(".bubble--merge-target").forEach((n) => {
       n.classList.remove("bubble--merge-target");
     });
   }
@@ -919,8 +1087,8 @@
       if (isBlockedSubtractionMerge(self, o)) continue;
       const c = bubbleCenterClient(o);
       if (distance(pt, c) < MERGE_DISTANCE_PX) {
-        const elA = bubblesHostEl().querySelector('.bubble[data-id="' + activeId + '"]');
-        const elO = bubblesHostEl().querySelector('.bubble[data-id="' + o.id + '"]');
+        const elA = els.playArea.querySelector('.bubble[data-id="' + activeId + '"]');
+        const elO = els.playArea.querySelector('.bubble[data-id="' + o.id + '"]');
         if (elA) elA.classList.add("bubble--merge-target");
         if (elO) elO.classList.add("bubble--merge-target");
         return;
@@ -930,7 +1098,7 @@
 
   function onPointerMove(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
-    const el = bubblesHostEl().querySelector('.bubble[data-id="' + drag.id + '"]');
+    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
     const b = findBubble(drag.id);
     if (!el || !b) return;
     const dx = ev.clientX - drag.startClient.x;
@@ -941,20 +1109,16 @@
       const cx = ev.clientX - drag.grabOffset.x;
       const cy = ev.clientY - drag.grabOffset.y;
       highlightMergeCandidates(drag.id, cx, cy);
-      if (els.mysteryTarget) {
-        els.mysteryTarget.classList.toggle("mystery-target--active", isPointInsideMysteryTarget(ev.clientX, ev.clientY));
-      }
     }
   }
 
   function onPointerUp(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
-    const el = bubblesHostEl().querySelector('.bubble[data-id="' + drag.id + '"]');
+    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
     const b = findBubble(drag.id);
     const had = drag;
     drag = null;
     clearMergeHighlights();
-    if (els.mysteryTarget) els.mysteryTarget.classList.remove("mystery-target--active");
     if (el) {
       el.releasePointerCapture(ev.pointerId);
       el.classList.remove("bubble--dragging");
@@ -966,10 +1130,6 @@
     }
     const cx = ev.clientX - had.grabOffset.x;
     const cy = ev.clientY - had.grabOffset.y;
-    if (had.moved && isPointInsideMysteryTarget(ev.clientX, ev.clientY)) {
-      tryPlaceOnMysteryTarget(b, el, had);
-      return;
-    }
     if (tryMergeOrPlace(b, el, cx, cy, had)) return;
   }
 
@@ -991,6 +1151,28 @@
   els.btnNew.addEventListener("click", () => {
     if (!els.modal.hidden) return;
     startChallenge(false);
+  });
+
+  els.btnGuideNext.addEventListener("click", () => {
+    if (!isGuidedChallenge()) return;
+    state.guideStep = Math.min(2, state.guideStep + 1);
+    if (state.guideStep >= 1) state.numericHintRevealed = true;
+    syncGuideUi();
+    updateHelpBanner();
+  });
+
+  els.btnHint.addEventListener("click", () => {
+    state.numericHintRevealed = true;
+    setHelpStickySecondary(buildHintStickyLine());
+  });
+
+  els.btnMysteryHelp.addEventListener("click", () => {
+    clearHelpStickySecondary();
+    setHelpStickySecondary(
+      "En la mesa, las burbujas celestes siguen las reglas de Bubble Math Lab; las rojas son el sustraendo. " +
+        "Las rayas doradas y celestes marcan buenos cruces para juntar."
+    );
+    renderBubbles();
   });
 
   els.modalNext.addEventListener("click", () => {
@@ -1022,21 +1204,6 @@
 
   els.mergeModal.querySelectorAll("[data-close-merge]").forEach((n) => {
     n.addEventListener("click", closeMergeModal);
-  });
-
-  els.btnMysteryHelp.addEventListener("click", () => {
-    clearHelpStickySecondary();
-    clearMysteryHelpHighlights();
-    if (state.mysteryType === "missing_addend") {
-      setHelpStickySecondary("Tocate el número grande (el total) para partirlo.");
-      highlightMysteryBubbles((bb) => bb.value === state.expectedResult);
-    } else if (state.mysteryType === "missing_subtrahend") {
-      setHelpStickySecondary("Tocá el número grande de la izquierda en la mesa para partirlo.");
-      highlightMysteryBubbles((bb) => bb.value === state.leftNumber);
-    } else if (state.mysteryType === "missing_minuend") {
-      setHelpStickySecondary("Arrastrá una burbuja sobre la otra para sumarlas.");
-      highlightMysteryBubbles(() => true);
-    }
   });
 
   document.addEventListener("pointermove", onPointerMove);

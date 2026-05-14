@@ -5,13 +5,14 @@
   --text-muted: #94a3b8;
   --accent: #7cffdf;
   --accent-2: #c084fc;
+  --accent-3: #fde047;
   --gold: #fde047;
   --gold-dark: #f59e0b;
   --danger: #f87171;
   --ok: #4ade80;
   --radius-pill: 999px;
-  --bubble-border: rgba(15, 23, 42, 0.35);
-  --shadow-glow: 0 0 24px rgba(124, 255, 223, 0.35);
+  --bubble-border: rgba(255, 255, 255, 0.45);
+  --shadow-glow: 0 0 28px rgba(124, 255, 223, 0.35), 0 0 48px rgba(192, 132, 252, 0.25);
 }
 
 *,
@@ -239,9 +240,28 @@ body {
   color: var(--text-muted);
 }
 
+.help-banner__secondary--text {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 .help-banner__secondary--alert {
   color: #fecdd3;
   font-weight: 600;
+}
+
+.workspace-goal {
+  width: 100%;
+  margin: 0 0 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .play-area {
@@ -251,75 +271,10 @@ body {
   min-height: clamp(280px, 46vh, 440px);
   border-radius: 1.35rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  box-shadow: inset 0 0 48px rgba(124, 255, 223, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 60px rgba(124, 255, 223, 0.06);
   overflow: hidden;
   touch-action: none;
-}
-
-.play-area__surface {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: inherit;
-}
-
-.mystery-target--dock {
-  position: absolute;
-  left: 0.5rem;
-  right: 0.5rem;
-  bottom: 0.45rem;
-  z-index: 4;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.4rem 0.55rem 0.5rem;
-  border-radius: 1rem;
-  background: rgba(15, 23, 42, 0.82);
-  border: 3px dashed rgba(253, 224, 71, 0.48);
-  box-shadow: 0 -4px 28px rgba(15, 23, 42, 0.45);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.mystery-target__label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.mystery-target__bubble {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  font-size: 1.35rem;
-  font-weight: 800;
-  border-radius: 50%;
-  color: #0f172a;
-  background: radial-gradient(circle at 30% 25%, #fff, var(--gold) 45%, var(--gold-dark) 100%);
-  box-shadow: 0 0 20px rgba(253, 224, 71, 0.5);
-  animation: mystery-pulse 2.4s ease-in-out infinite;
-}
-
-.mystery-target--active {
-  border-color: rgba(124, 255, 223, 0.75);
-  box-shadow:
-    0 0 0 2px rgba(124, 255, 223, 0.3),
-    0 -4px 28px rgba(15, 23, 42, 0.45);
-}
-
-.mystery-target--wrong {
-  animation: mystery-shake 0.45s ease;
-  border-color: rgba(248, 113, 113, 0.65);
-}
-
-.mystery-target--success {
-  border-color: rgba(74, 222, 128, 0.75);
 }
 
 @keyframes mystery-pulse {
@@ -349,20 +304,17 @@ body {
 
 .bubble {
   position: absolute;
-  width: 76px;
-  height: 76px;
-  margin-left: -38px;
-  margin-top: -38px;
+  width: 80px;
+  height: 80px;
+  margin-left: -40px;
+  margin-top: -40px;
   border-radius: 50%;
   cursor: grab;
   user-select: none;
+  -webkit-user-select: none;
   z-index: 5;
   touch-action: none;
-}
-
-.bubble--dragging {
-  cursor: grabbing;
-  z-index: 50;
+  transform: translateZ(0);
 }
 
 .bubble__inner {
@@ -373,66 +325,209 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   color: #0f172a;
-  background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08) 45%, rgba(124, 255, 223, 0.2));
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08) 45%, rgba(124, 255, 223, 0.22));
   border: 2px solid var(--bubble-border);
-  box-shadow: var(--shadow-glow), inset 0 -6px 14px rgba(15, 23, 42, 0.22);
-  animation: floaty 5s ease-in-out infinite;
+  box-shadow: var(--shadow-glow), inset 0 -6px 16px rgba(15, 23, 42, 0.25);
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .bubble--subtrahend .bubble__inner {
   border-color: rgba(248, 113, 113, 0.95);
+  border-width: 2px;
   background: radial-gradient(
     circle at 30% 28%,
-    rgba(255, 255, 255, 0.45),
-    rgba(254, 202, 202, 0.35) 42%,
-    rgba(252, 165, 165, 0.25)
+    rgba(255, 255, 255, 0.48),
+    rgba(254, 202, 202, 0.28) 42%,
+    rgba(252, 165, 165, 0.22)
   );
   box-shadow:
-    0 0 16px rgba(239, 68, 68, 0.55),
-    inset 0 -5px 12px rgba(15, 23, 42, 0.2);
+    0 0 18px rgba(239, 68, 68, 0.65),
+    0 0 32px rgba(220, 38, 38, 0.35),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.22);
 }
 
-.bubble--dragging .bubble__inner {
-  animation: none !important;
-  transform: scale(1.06);
+.bubble:nth-child(3n + 1) .bubble__inner {
+  animation-delay: -2.5s;
 }
 
-.bubble--merge-target .bubble__inner {
-  box-shadow: 0 0 0 3px rgba(253, 224, 71, 0.85), var(--shadow-glow);
+.bubble:not(:hover):not(.bubble--dragging) .bubble__inner {
+  animation: floaty-inner 5.2s ease-in-out infinite;
 }
 
-.bubble--shake .bubble__inner {
-  animation: shake 0.4s ease !important;
-}
-
-.bubble--mystery-help .bubble__inner {
-  box-shadow:
-    0 0 0 3px rgba(253, 224, 71, 0.65),
-    0 0 22px rgba(253, 224, 71, 0.35);
-}
-
-@keyframes floaty {
+@keyframes floaty-inner {
   0%,
   100% {
     transform: translate3d(0, 0, 0);
   }
   50% {
-    transform: translate3d(0, -4px, 0);
+    transform: translate3d(0, -5px, 0);
   }
 }
 
-@keyframes shake {
+.bubble:hover .bubble__inner {
+  animation: none;
+  transform: translate3d(0, -3px, 0) scale(1.06);
+  box-shadow: 0 0 36px rgba(192, 132, 252, 0.45), inset 0 -6px 16px rgba(15, 23, 42, 0.2);
+  transition: transform 0.28s cubic-bezier(0.33, 1, 0.32, 1), box-shadow 0.25s ease;
+}
+
+.bubble--subtrahend:hover .bubble__inner {
+  box-shadow:
+    0 0 34px rgba(239, 68, 68, 0.6),
+    0 0 48px rgba(248, 113, 113, 0.42),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.bubble:not(:hover) .bubble__inner {
+  transition: box-shadow 0.22s ease;
+}
+
+.bubble--dragging {
+  cursor: grabbing;
+  z-index: 50;
+}
+
+.bubble--dragging .bubble__inner {
+  animation: none !important;
+  transform: scale(1.08) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.45), 0 0 40px rgba(124, 255, 223, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.bubble--subtrahend.bubble--dragging .bubble__inner {
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.48),
+    0 0 42px rgba(248, 113, 113, 0.65),
+    0 0 28px rgba(239, 68, 68, 0.45);
+}
+
+.bubble--hint-priority:not(.bubble--dragging):not(.bubble--merge-target) .bubble__inner {
+  box-shadow:
+    0 0 0 2px rgba(253, 224, 71, 0.95),
+    0 0 26px rgba(250, 204, 21, 0.55),
+    0 0 48px rgba(245, 158, 11, 0.32),
+    var(--shadow-glow),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.22);
+}
+
+.bubble--hint-priority:not(.bubble--dragging):not(.bubble--merge-target):hover .bubble__inner {
+  box-shadow:
+    0 0 0 2px rgba(254, 240, 138, 0.98),
+    0 0 34px rgba(250, 204, 21, 0.65),
+    0 0 52px rgba(251, 191, 36, 0.4),
+    0 0 28px rgba(192, 132, 252, 0.35),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.bubble--hint-secondary:not(.bubble--dragging):not(.bubble--merge-target) .bubble__inner {
+  box-shadow:
+    0 0 0 2px rgba(125, 211, 252, 0.85),
+    0 0 22px rgba(14, 165, 233, 0.45),
+    0 0 40px rgba(56, 189, 248, 0.22),
+    var(--shadow-glow),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.22);
+}
+
+.bubble--hint-secondary:not(.bubble--dragging):not(.bubble--merge-target):hover .bubble__inner {
+  box-shadow:
+    0 0 0 2px rgba(186, 230, 253, 0.95),
+    0 0 30px rgba(56, 189, 248, 0.55),
+    0 0 44px rgba(14, 165, 233, 0.3),
+    0 0 24px rgba(192, 132, 252, 0.32),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.bubble--merge-target .bubble__inner {
+  animation: none;
+  box-shadow: 0 0 0 3px var(--accent-3), 0 0 32px rgba(253, 224, 71, 0.55), inset 0 -6px 16px rgba(15, 23, 42, 0.15);
+}
+
+.bubble--subtrahend.bubble--merge-target .bubble__inner {
+  box-shadow:
+    0 0 0 3px var(--accent-3),
+    0 0 32px rgba(253, 224, 71, 0.55),
+    0 0 26px rgba(239, 68, 68, 0.5),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.15);
+}
+
+.bubble--shake .bubble__inner {
+  animation: shake-inner 0.45s ease;
+}
+
+@keyframes shake-inner {
   0%,
   100% {
     transform: translateX(0);
   }
   25% {
-    transform: translateX(-4px);
+    transform: translateX(-6px);
   }
   75% {
-    transform: translateX(4px);
+    transform: translateX(6px);
+  }
+}
+
+.bubble--splitting .bubble__inner {
+  animation: none !important;
+  transition: none;
+}
+
+.bubble--splitting {
+  cursor: default;
+  pointer-events: none;
+  z-index: 44;
+  will-change: transform, opacity, filter;
+  animation: bubble-splitting 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes bubble-splitting {
+  0% {
+    transform: translateZ(0) scale(1);
+    filter: brightness(1);
+    opacity: 1;
+  }
+  28% {
+    transform: translateZ(0) scale(1.12);
+    filter: brightness(1.35);
+    opacity: 1;
+  }
+  100% {
+    transform: translateZ(0) scale(0.04);
+    opacity: 0;
+    filter: brightness(1.85) blur(5px);
+  }
+}
+
+.bubble--emerge {
+  will-change: transform, opacity, filter;
+  animation: bubble-emerge-from-split 0.72s cubic-bezier(0.25, 0.9, 0.35, 1) forwards;
+  z-index: 42;
+}
+
+.bubble--emerge .bubble__inner {
+  animation: none !important;
+  transition: opacity 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
+}
+
+@keyframes bubble-emerge-from-split {
+  0% {
+    opacity: 0.2;
+    filter: brightness(1.35) blur(2px);
+    transform: translate3d(var(--split-from-x), var(--split-from-y), 0) scale(0.35);
+  }
+  55% {
+    opacity: 1;
+    filter: brightness(1.08) blur(0);
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1) blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -562,11 +657,24 @@ body {
 
 .confetti-piece {
   position: absolute;
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  opacity: 0.85;
+  opacity: 0.9;
   animation: confetti-fall 1.8s ease-out forwards;
+}
+
+.firework-ray {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 95;
+  opacity: 1;
+  animation: firework-burst 0.95s cubic-bezier(0.15, 0.85, 0.2, 1) forwards;
 }
 
 @keyframes confetti-fall {
@@ -576,16 +684,51 @@ body {
   }
 }
 
+@keyframes firework-burst {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.4);
+    filter: brightness(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--fw-dx), var(--fw-dy), 0) scale(0.15);
+    filter: brightness(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bubble__inner {
+  .bubble:not(:hover):not(.bubble--dragging) .bubble__inner {
     animation: none !important;
   }
-  .equation__part--mystery,
-  .mystery-target__bubble {
+  .bubble--splitting,
+  .bubble--emerge {
     animation: none !important;
   }
-  .confetti-piece {
+  .equation__part--mystery {
+    animation: none !important;
+  }
+  .confetti-piece,
+  .firework-ray {
     animation-duration: 0.01ms !important;
     opacity: 0 !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .bubble {
+    width: 72px;
+    height: 72px;
+    margin-left: -36px;
+    margin-top: -36px;
+  }
+
+  .bubble__inner {
+    font-size: 1.42rem;
+  }
+
+  .game-footer .btn {
+    min-width: 100px;
+    font-size: 0.82rem;
   }
 }
