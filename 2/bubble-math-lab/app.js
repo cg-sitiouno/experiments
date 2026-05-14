@@ -540,6 +540,7 @@
     tutorialBody: document.getElementById("tutorial-strip-body"),
     tutorialSkip: document.getElementById("btn-tutorial-skip"),
     playArea: document.getElementById("play-area"),
+    playSurface: document.getElementById("play-area-surface"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
@@ -552,6 +553,11 @@
     mergeFeedback: document.getElementById("merge-feedback"),
     confetti: document.getElementById("confetti-root"),
   };
+
+  /** Contenedor directo de burbujas y partículas de split (mismo rect que el hit-test de arrastre). */
+  function bubblesHostEl() {
+    return els.playSurface || els.playArea;
+  }
 
   function syncDifficultyHud() {
     if (state.playMode === "tutorial") {
@@ -881,6 +887,12 @@
     if (els.equation) {
       els.equation.classList.toggle("equation--mystery", state.playMode === "mystery");
     }
+    if (els.playArea) {
+      els.playArea.classList.toggle(
+        "play-area--mystery",
+        state.playMode === "mystery" && !els.screenGame.hidden,
+      );
+    }
     if (els.mysteryTarget) {
       const show = state.playMode === "mystery" && !els.screenGame.hidden;
       els.mysteryTarget.hidden = !show;
@@ -924,7 +936,7 @@
   }
 
   function clearBubbleEls() {
-    els.playArea.querySelectorAll(".bubble").forEach((n) => n.remove());
+    bubblesHostEl().querySelectorAll(".bubble").forEach((n) => n.remove());
   }
 
   function pxFromPercent(pxW, pxH, xPct, yPct) {
@@ -989,7 +1001,7 @@
     el.appendChild(inner);
     placeBubbleEl(el, b.x, b.y);
     el.addEventListener("pointerdown", onBubblePointerDown);
-    els.playArea.appendChild(el);
+    bubblesHostEl().appendChild(el);
     return el;
   }
 
@@ -1449,12 +1461,12 @@
   }
 
   function playAreaRect() {
-    return els.playArea.getBoundingClientRect();
+    return bubblesHostEl().getBoundingClientRect();
   }
 
   function spawnSplitParticles(bubbleEl) {
     const br = bubbleEl.getBoundingClientRect();
-    const pr = els.playArea.getBoundingClientRect();
+    const pr = bubblesHostEl().getBoundingClientRect();
     const cx = br.left + br.width / 2 - pr.left;
     const cy = br.top + br.height / 2 - pr.top;
     const colors = ["#7cffdf", "#c084fc", "#fef08a", "#ffffff", "#38bdf8"];
@@ -1469,7 +1481,7 @@
       p.style.setProperty("--split-dx", Math.cos(ang) * dist + "px");
       p.style.setProperty("--split-dy", Math.sin(ang) * dist + "px");
       p.style.background = colors[i % colors.length];
-      els.playArea.appendChild(p);
+      bubblesHostEl().appendChild(p);
       window.setTimeout(() => p.remove(), 650);
     }
   }

@@ -88,17 +88,6 @@
           <span class="equation__result" id="eq-result-label">?</span>
         </div>
 
-        <div
-          id="mystery-target"
-          class="mystery-target"
-          role="region"
-          aria-label="Zona para colocar el número escondido"
-          hidden
-        >
-          <span class="mystery-target__label">Arrastrá aquí la burbuja escondida</span>
-          <span class="mystery-target__bubble" aria-hidden="true">?</span>
-        </div>
-
         <div class="fusion-bar" id="fusion-bar" role="group" aria-label="Barra de autofusión">
           <div class="fusion-bar__label" id="fusion-bar-label">Autofusión 0/10</div>
           <div class="fusion-bar__track">
@@ -115,8 +104,20 @@
           id="play-area"
           class="play-area"
           role="application"
-          aria-label="Área de burbujas. Arrastra para fusionar (suma o resta según el reto); clic para descomponer. Cuando quede una sola burbuja con el resultado, ganas el reto."
-        ></div>
+          aria-label="Área de burbujas. Arrastra para fusionar o hacia la cajita en Cajita Misteriosa; clic para descomponer. En modos normales, una sola burbuja con el resultado completa el reto."
+        >
+          <div id="play-area-surface" class="play-area__surface"></div>
+          <div
+            id="mystery-target"
+            class="mystery-target mystery-target--dock"
+            role="region"
+            aria-label="Zona para colocar el número escondido"
+            hidden
+          >
+            <span class="mystery-target__label">Arrastrá aquí la burbuja escondida</span>
+            <span class="mystery-target__bubble" aria-hidden="true">?</span>
+          </div>
+        </div>
 
         <footer class="game-footer">
           <button type="button" id="btn-mystery-help" class="btn btn--ghost" hidden>
