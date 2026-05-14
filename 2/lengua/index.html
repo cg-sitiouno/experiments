@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Lengua Lab: mini-juegos de tiempos verbales, sílabas, vocales y ortografía."
+    />
+    <title>Lengua Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../game-select.css" />
+  </head>
+  <body>
+    <section class="game-select" aria-label="Selección de juego de lengua">
+      <div class="hub-back">
+        <a href="../index.html">← Todas las materias</a>
+      </div>
+
+      <header class="game-select__header">
+        <h1>Lengua Lab</h1>
+        <p>
+          Elige una aventura y practica verbos, sílabas, vocales y más.
+        </p>
+      </header>
+
+      <div class="game-select__grid">
+        <!-- Juego 1: Máquina del Tiempo Verbal — activo -->
+        <a
+          class="game-card game-card--tiempo"
+          href="maquina-del-tiempo/index.html"
+          aria-label="Abrir Máquina del Tiempo — clasifica verbos en pasado, presente y futuro"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Máquina del tiempo con tres portales</title>
+              <defs>
+                <radialGradient id="mt-past" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#6d28d9" stop-opacity="0.6" />
+                </radialGradient>
+                <radialGradient id="mt-now" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#5cffe8" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#0891b2" stop-opacity="0.6" />
+                </radialGradient>
+                <radialGradient id="mt-fut" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#fde047" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#d97706" stop-opacity="0.6" />
+                </radialGradient>
+                <filter id="mt-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="3" result="b" />
+                  <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <!-- Portal pasado -->
+              <ellipse cx="52" cy="130" rx="22" ry="30" fill="url(#mt-past)" stroke="#a78bfa" stroke-width="2" filter="url(#mt-glow)" />
+              <text x="52" y="135" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="800" fill="#f5f3ff">⏳</text>
+              <!-- Portal presente -->
+              <ellipse cx="100" cy="122" rx="24" ry="34" fill="url(#mt-now)" stroke="#5cffe8" stroke-width="2.5" filter="url(#mt-glow)" />
+              <text x="100" y="128" text-anchor="middle" font-size="22" font-family="Nunito, sans-serif" font-weight="800" fill="#f0fdfa">⚡</text>
+              <!-- Portal futuro -->
+              <ellipse cx="150" cy="130" rx="22" ry="30" fill="url(#mt-fut)" stroke="#fde047" stroke-width="2" filter="url(#mt-glow)" />
+              <text x="150" y="135" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="800" fill="#fefce8">🚀</text>
+              <!-- Etiquetas -->
+              <text x="52" y="168" text-anchor="middle" font-size="8.5" font-family="Nunito, sans-serif" font-weight="800" fill="#c4b5fd">PASADO</text>
+              <text x="100" y="163" text-anchor="middle" font-size="8.5" font-family="Nunito, sans-serif" font-weight="800" fill="#67e8f9">PRESENTE</text>
+              <text x="150" y="168" text-anchor="middle" font-size="8.5" font-family="Nunito, sans-serif" font-weight="800" fill="#fde047">FUTURO</text>
+              <!-- Frase de ejemplo -->
+              <rect x="30" y="42" width="140" height="32" rx="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+              <text x="100" y="62" text-anchor="middle" font-size="11" font-family="Nunito, sans-serif" font-weight="700" fill="#f4f7ff">Ella cantó una canción.</text>
+              <!-- partículas -->
+              <circle cx="25" cy="85" r="2" fill="#a78bfa" opacity="0.7" />
+              <circle cx="178" cy="72" r="1.8" fill="#fde047" opacity="0.7" />
+              <circle cx="170" cy="170" r="1.5" fill="#5cffe8" opacity="0.7" />
+            </svg>
+          </div>
+          <h2 class="game-card__title">Máquina del Tiempo</h2>
+          <p class="game-card__tagline">Pasado, presente y futuro</p>
+        </a>
+
+        <!-- Juego 2: Cazador de Sílabas — activo -->
+        <a
+          class="game-card game-card--silabas"
+          href="cazador-silabas/index.html"
+          aria-label="Abrir Cazador de Sílabas — encuentra la sílaba tónica"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Bloques de sílabas con una resaltada</title>
+              <defs>
+                <filter id="cs-glow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="3" result="b" />
+                  <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              <!-- Palabra "co-ra-zón" arriba -->
+              <text x="100" y="52" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="800" fill="rgba(255,255,255,0.5)">co · ra · zón</text>
+              <!-- Bloque ca -->
+              <rect x="18" y="88" width="46" height="46" rx="12" fill="rgba(16,185,129,0.15)" stroke="rgba(110,231,183,0.4)" stroke-width="1.5" />
+              <text x="41" y="117" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="800" fill="#6ee7b7">co</text>
+              <!-- Bloque mi -->
+              <rect x="77" y="88" width="46" height="46" rx="12" fill="rgba(16,185,129,0.15)" stroke="rgba(110,231,183,0.4)" stroke-width="1.5" />
+              <text x="100" y="117" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="800" fill="#6ee7b7">ra</text>
+              <!-- Bloque sa — TÓNICA, resaltada -->
+              <rect x="136" y="78" width="50" height="56" rx="12" fill="rgba(16,185,129,0.35)" stroke="#6ee7b7" stroke-width="2.5" filter="url(#cs-glow)" />
+              <text x="161" y="112" text-anchor="middle" font-size="20" font-family="Nunito, sans-serif" font-weight="800" fill="#d1fae5">zón</text>
+              <!-- Onda de sonido en la tónica -->
+              <path d="M148 95 Q142 107 148 119" fill="none" stroke="#6ee7b7" stroke-width="1.5" stroke-linecap="round" opacity="0.7" />
+              <path d="M143 91 Q134 107 143 123" fill="none" stroke="#6ee7b7" stroke-width="1.2" stroke-linecap="round" opacity="0.4" />
+              <!-- Lupa -->
+              <circle cx="55" cy="158" r="14" fill="none" stroke="#a78bfa" stroke-width="2.5" />
+              <line x1="65" y1="168" x2="74" y2="177" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" />
+              <!-- partículas -->
+              <circle cx="22" cy="60" r="2" fill="#6ee7b7" opacity="0.6" />
+              <circle cx="178" cy="155" r="1.8" fill="#a78bfa" opacity="0.7" />
+            </svg>
+          </div>
+          <h2 class="game-card__title">Cazador de Sílabas</h2>
+          <p class="game-card__tagline">Encuentra la sílaba que suena más fuerte</p>
+        </a>
+
+        <!-- Juego 3: Fuerza Vocal — próximamente -->
+        <div
+          class="game-card game-card--locked"
+          role="img"
+          aria-label="Fuerza Vocal — próximamente"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <text x="100" y="88" text-anchor="middle" font-size="38" font-family="Nunito, sans-serif" font-weight="800" fill="#f472b6" opacity="0.7">a e o</text>
+              <text x="100" y="130" text-anchor="middle" font-size="28" font-family="Nunito, sans-serif" font-weight="800" fill="#a78bfa" opacity="0.5">i u</text>
+              <circle cx="100" cy="105" r="55" fill="none" stroke="rgba(244,114,182,0.25)" stroke-width="2" />
+            </svg>
+          </div>
+          <h2 class="game-card__title">Fuerza Vocal</h2>
+          <p class="game-card__tagline">Vocales fuertes y débiles</p>
+          <span class="game-card__badge">Próximamente</span>
+        </div>
+
+        <!-- Juego 4: Tren de Sílabas — próximamente -->
+        <div
+          class="game-card game-card--locked"
+          role="img"
+          aria-label="Tren de Sílabas — próximamente"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <!-- Tren simple -->
+              <rect x="30" y="110" width="140" height="45" rx="10" fill="rgba(245,158,11,0.2)" stroke="rgba(253,224,71,0.4)" stroke-width="1.5" />
+              <rect x="50" y="92" width="45" height="25" rx="6" fill="rgba(245,158,11,0.15)" stroke="rgba(253,224,71,0.3)" stroke-width="1" />
+              <circle cx="60" cy="162" r="10" fill="rgba(253,224,71,0.3)" stroke="#fde047" stroke-width="1.5" />
+              <circle cx="140" cy="162" r="10" fill="rgba(253,224,71,0.3)" stroke="#fde047" stroke-width="1.5" />
+              <text x="100" y="137" text-anchor="middle" font-size="14" font-family="Nunito, sans-serif" font-weight="800" fill="#fde047" opacity="0.8">ma-ri-po-sa</text>
+            </svg>
+          </div>
+          <h2 class="game-card__title">Tren de Sílabas</h2>
+          <p class="game-card__tagline">Cuenta cuántas sílabas tiene una palabra</p>
+          <span class="game-card__badge">Próximamente</span>
+        </div>
+
+        <!-- Juego 5: Misión C/S/Z — próximamente -->
+        <div
+          class="game-card game-card--locked"
+          role="img"
+          aria-label="Misión C/S/Z — próximamente"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <!-- Tiles de letras -->
+              <rect x="22" y="72" width="46" height="56" rx="10" fill="rgba(92,255,232,0.15)" stroke="rgba(92,255,232,0.35)" stroke-width="1.5" />
+              <text x="45" y="108" text-anchor="middle" font-size="32" font-family="Nunito, sans-serif" font-weight="800" fill="#5cffe8" opacity="0.8">C</text>
+              <rect x="77" y="72" width="46" height="56" rx="10" fill="rgba(167,139,250,0.15)" stroke="rgba(167,139,250,0.35)" stroke-width="1.5" />
+              <text x="100" y="108" text-anchor="middle" font-size="32" font-family="Nunito, sans-serif" font-weight="800" fill="#a78bfa" opacity="0.8">S</text>
+              <rect x="132" y="72" width="46" height="56" rx="10" fill="rgba(244,114,182,0.15)" stroke="rgba(244,114,182,0.35)" stroke-width="1.5" />
+              <text x="155" y="108" text-anchor="middle" font-size="32" font-family="Nunito, sans-serif" font-weight="800" fill="#f472b6" opacity="0.8">Z</text>
+              <text x="100" y="148" text-anchor="middle" font-size="11" font-family="Nunito, sans-serif" font-weight="700" fill="rgba(255,255,255,0.3">__apato →</text>
+            </svg>
+          </div>
+          <h2 class="game-card__title">Misión C/S/Z</h2>
+          <p class="game-card__tagline">Completa palabras con c, s o z</p>
+          <span class="game-card__badge">Próximamente</span>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

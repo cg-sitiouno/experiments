@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Máquina del Tiempo Verbal — clasifica verbos y oraciones en pasado, presente o futuro."
+    />
+    <title>Máquina del Tiempo Verbal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <!-- ========== PANTALLA DE INICIO ========== -->
+    <section id="screen-start" class="screen screen--start" aria-label="Inicio del juego">
+      <a href="../index.html" class="link-hub">← Lengua Lab</a>
+
+      <div class="start-art" aria-hidden="true">
+        <span class="portal-icon portal-icon--past">⏳</span>
+        <span class="portal-icon portal-icon--now">⚡</span>
+        <span class="portal-icon portal-icon--future">🚀</span>
+      </div>
+
+      <h1 class="start-title">Máquina del Tiempo</h1>
+      <p class="start-desc">
+        ¿La acción ocurrió <strong>ayer</strong>, pasa <strong>hoy</strong> o será <strong>mañana</strong>?
+        Clasifica cada oración en su portal.
+      </p>
+
+      <div class="level-grid" role="group" aria-label="Elige un nivel">
+        <button type="button" class="btn-level" data-level="1">
+          <span class="btn-level__name">Nivel 1</span>
+          <span class="btn-level__hint">Verbos simples y claros</span>
+        </button>
+        <button type="button" class="btn-level" data-level="2">
+          <span class="btn-level__name">Nivel 2</span>
+          <span class="btn-level__hint">Oraciones más variadas</span>
+        </button>
+        <button type="button" class="btn-level" data-level="3">
+          <span class="btn-level__name">Nivel 3</span>
+          <span class="btn-level__hint">Expresiones más complejas</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========== PANTALLA DE JUEGO ========== -->
+    <section id="screen-game" class="screen screen--game" hidden aria-label="Partida en curso">
+
+      <div class="hud" role="status" aria-live="polite">
+        <span class="hud__item">
+          <span class="hud__label">Puntos</span>
+          <span class="hud__value hud__value--gold" id="hud-points">0</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__label">Ronda</span>
+          <span class="hud__value" id="hud-round">1 / 10</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__value hud__value--level" id="hud-level">Nivel 1</span>
+        </span>
+      </div>
+
+      <div class="sentence-card" aria-live="polite">
+        <p class="sentence-text" id="sentence-text"></p>
+      </div>
+
+      <div class="portals" role="group" aria-label="Elige el tiempo verbal">
+        <button type="button" class="portal portal--past" data-answer="pasado" aria-label="Pasado">
+          <span class="portal__icon">⏳</span>
+          <span class="portal__label">Pasado</span>
+        </button>
+        <button type="button" class="portal portal--now" data-answer="presente" aria-label="Presente">
+          <span class="portal__icon">⚡</span>
+          <span class="portal__label">Presente</span>
+        </button>
+        <button type="button" class="portal portal--future" data-answer="futuro" aria-label="Futuro">
+          <span class="portal__icon">🚀</span>
+          <span class="portal__label">Futuro</span>
+        </button>
+      </div>
+
+      <div id="feedback-bar" class="feedback-bar" hidden role="alert">
+        <span id="feedback-text"></span>
+      </div>
+
+      <footer class="game-footer">
+        <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
+        <a class="btn-ghost" href="../index.html">Lengua Lab</a>
+      </footer>
+    </section>
+
+    <!-- ========== PANTALLA DE RESULTADO ========== -->
+    <section id="screen-result" class="screen screen--result" hidden aria-label="Resultado de la partida">
+      <h2 class="result-title">¡Tiempo completado!</h2>
+      <div class="result-stars" id="result-stars" aria-label="Estrellas obtenidas"></div>
+      <div class="result-points" id="result-points"></div>
+      <p class="result-msg" id="result-msg"></p>
+      <div class="result-actions">
+        <button type="button" class="btn-primary" id="btn-play-again">Jugar de nuevo</button>
+        <a class="btn-secondary" href="../index.html">← Lengua Lab</a>
+      </div>
+    </section>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

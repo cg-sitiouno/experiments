@@ -1,4 +1,5 @@
-/* Hub de selección — tarjetas tipo ícono / videojuego educativo */
+/* Hub de selección — tarjetas tipo ícono / videojuego educativo
+   Usado por: index.html (selector de materias), matematica/index.html, lengua/index.html */
 
 :root {
   --bg-deep: #0c0618;
@@ -186,4 +187,104 @@ body {
   color: var(--muted);
   line-height: 1.35;
   max-width: 15rem;
+}
+
+/* Materia: Matemática — acento cyan */
+.game-card--math {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(6, 182, 212, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--math:hover {
+  border-color: rgba(94, 234, 212, 0.45);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(6, 182, 212, 0.28),
+    0 0 72px rgba(167, 139, 250, 0.2);
+}
+
+/* Materia: Lengua — acento rosa/verde */
+.game-card--lengua {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(236, 72, 153, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--lengua:hover {
+  border-color: rgba(249, 168, 212, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(236, 72, 153, 0.22),
+    0 0 64px rgba(16, 185, 129, 0.15);
+}
+
+/* Tarjeta de juego de lengua individual */
+.game-card--tiempo {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(124, 58, 237, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--tiempo:hover {
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(124, 58, 237, 0.28);
+}
+
+.game-card--silabas {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(16, 185, 129, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--silabas:hover {
+  border-color: rgba(110, 231, 183, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(16, 185, 129, 0.22);
+}
+
+/* Tarjeta bloqueada / próximamente */
+.game-card--locked {
+  opacity: 0.42;
+  cursor: default;
+  pointer-events: none;
+}
+
+.game-card__badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.18em 0.65em;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Back link en hubs de materia */
+.hub-back {
+  text-align: center;
+  margin-bottom: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.hub-back a {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.hub-back a:hover {
+  color: var(--text);
 }

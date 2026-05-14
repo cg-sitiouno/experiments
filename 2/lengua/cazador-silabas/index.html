@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Cazador de Sílabas — encuentra la sílaba tónica, la que suena más fuerte."
+    />
+    <title>Cazador de Sílabas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <!-- ========== PANTALLA DE INICIO ========== -->
+    <section id="screen-start" class="screen screen--start" aria-label="Inicio del juego">
+      <a href="../index.html" class="link-hub">← Lengua Lab</a>
+
+      <div class="start-art" aria-hidden="true">
+        <span class="syl-preview">ca</span>
+        <span class="syl-preview syl-preview--tonic">MI</span>
+        <span class="syl-preview">sa</span>
+      </div>
+
+      <h1 class="start-title">Cazador de Sílabas</h1>
+      <p class="start-desc">
+        Cada palabra tiene una sílaba que <strong>suena más fuerte</strong>.
+        ¡Encuéntrala y tócala!
+      </p>
+
+      <div class="level-grid" role="group" aria-label="Elige un nivel">
+        <button type="button" class="btn-level" data-level="1">
+          <span class="btn-level__name">Nivel 1</span>
+          <span class="btn-level__hint">Palabras cortas y familiares</span>
+        </button>
+        <button type="button" class="btn-level" data-level="2">
+          <span class="btn-level__name">Nivel 2</span>
+          <span class="btn-level__hint">Palabras de 2 y 3 sílabas</span>
+        </button>
+        <button type="button" class="btn-level" data-level="3">
+          <span class="btn-level__name">Nivel 3</span>
+          <span class="btn-level__hint">Palabras más largas y difíciles</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========== PANTALLA DE JUEGO ========== -->
+    <section id="screen-game" class="screen screen--game" hidden aria-label="Partida en curso">
+
+      <div class="hud" role="status" aria-live="polite">
+        <span class="hud__item">
+          <span class="hud__label">Puntos</span>
+          <span class="hud__value hud__value--gold" id="hud-points">0</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__label">Ronda</span>
+          <span class="hud__value" id="hud-round">1 / 10</span>
+        </span>
+        <span class="hud__item">
+          <span class="hud__value hud__value--level" id="hud-level">Nivel 1</span>
+        </span>
+      </div>
+
+      <div class="word-area">
+        <p class="word-display" id="word-display" aria-live="polite"></p>
+        <p class="word-instruction">Toca la sílaba que suena más fuerte</p>
+      </div>
+
+      <div class="syllables-wrap">
+        <div class="syllables-container" id="syllables-container" role="group" aria-label="Sílabas"></div>
+      </div>
+
+      <div id="feedback-bar" class="feedback-bar" hidden role="alert">
+        <span id="feedback-text"></span>
+      </div>
+
+      <footer class="game-footer">
+        <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
+        <a class="btn-ghost" href="../index.html">Lengua Lab</a>
+      </footer>
+    </section>
+
+    <!-- ========== PANTALLA DE RESULTADO ========== -->
+    <section id="screen-result" class="screen screen--result" hidden aria-label="Resultado de la partida">
+      <h2 class="result-title">¡Cacería completada!</h2>
+      <div class="result-stars" id="result-stars" aria-label="Estrellas obtenidas"></div>
+      <div class="result-points" id="result-points"></div>
+      <p class="result-msg" id="result-msg"></p>
+      <div class="result-actions">
+        <button type="button" class="btn-primary" id="btn-play-again">Jugar de nuevo</button>
+        <a class="btn-secondary" href="../index.html">← Lengua Lab</a>
+      </div>
+    </section>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
