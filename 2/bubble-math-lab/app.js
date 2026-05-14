@@ -409,7 +409,8 @@
     tutorialSkip: document.getElementById("btn-tutorial-skip"),
     playArea: document.getElementById("play-area"),
     modal: document.getElementById("modal-success"),
-    modalMsg: document.getElementById("modal-success-msg"),
+    modalShowcase: document.getElementById("modal-success-showcase"),
+    modalDetail: document.getElementById("modal-success-detail"),
     modalNext: document.getElementById("modal-next"),
     mergeModal: document.getElementById("modal-merge"),
     mergeTitle: document.getElementById("modal-merge-title"),
@@ -1443,33 +1444,76 @@
     }, 2200);
   }
 
+  /**
+   * @param {HTMLElement} container
+   * @param {number} left
+   * @param {'add' | 'subtract'} op
+   * @param {number} right
+   * @param {number} result
+   * @param {{ rightIsSubtrahend?: boolean }} [opts]
+   */
+  function fillSuccessShowcase(container, left, op, right, result, opts) {
+    const rightIsSubtrahend = Boolean(opts && opts.rightIsSubtrahend);
+    container.replaceChildren();
+    const opChar = op === "subtract" ? "−" : "+";
+    const ariaOp = op === "subtract" ? "menos" : "más";
+
+    function bubble(n, variant) {
+      const wrap = document.createElement("span");
+      wrap.className = "modal-bubble-wrap";
+      const inner = document.createElement("span");
+      inner.className =
+        "modal-bubble__inner" +
+        (variant === "subtrahend"
+          ? " modal-bubble__inner--subtrahend"
+          : variant === "result"
+            ? " modal-bubble__inner--result"
+            : "");
+      inner.textContent = String(n);
+      wrap.appendChild(inner);
+      return wrap;
+    }
+    const opEl = document.createElement("span");
+    opEl.className = "modal-success-showcase__op";
+    opEl.textContent = opChar;
+    const eqEl = document.createElement("span");
+    eqEl.className = "modal-success-showcase__eq";
+    eqEl.textContent = "=";
+
+    container.appendChild(bubble(left, "operand"));
+    container.appendChild(opEl);
+    container.appendChild(bubble(right, rightIsSubtrahend ? "subtrahend" : "operand"));
+    container.appendChild(eqEl);
+    container.appendChild(bubble(result, "result"));
+
+    container.setAttribute(
+      "aria-label",
+      left + " " + ariaOp + " " + right + ", igual a " + result
+    );
+  }
+
   function openSuccessModal() {
     closeMergeModalCancelled();
-    const opLabel = state.challengeOp === "subtract" ? " − " : " + ";
+    fillSuccessShowcase(
+      els.modalShowcase,
+      state.leftNumber,
+      state.challengeOp,
+      state.rightNumber,
+      state.expectedResult,
+      { rightIsSubtrahend: state.challengeOp === "subtract" }
+    );
     if (state.playMode === "tutorial") {
       const isLast = state.tutorialStep >= TUTORIAL_SEQUENCE.length - 1;
-      els.modalMsg.textContent =
-        state.leftNumber +
-        opLabel +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        ". " +
-        (isLast
-          ? "Completaste el último paso del tutorial."
-          : "Resolviste este paso. El siguiente introduce otra idea clave.");
+      els.modalDetail.textContent = isLast
+        ? "Completaste el último paso del tutorial."
+        : "Resolviste este paso. El siguiente introduce otra idea clave.";
       els.modalNext.textContent = isLast ? "Terminar tutorial" : "Siguiente paso";
     } else {
-      els.modalMsg.textContent =
-        state.leftNumber +
-        opLabel +
-        state.rightNumber +
-        " = " +
-        state.expectedResult +
-        ". Usaste descomposición y fusión para llegar al resultado. " +
-        "Llevas " +
+      els.modalDetail.textContent =
+        "Combinaste y descompusiste bien para llegar a este resultado. " +
+        "Tienes " +
         state.score +
-        " pts.";
+        " puntos en total.";
       els.modalNext.textContent = "Siguiente reto";
     }
     els.modal.hidden = false;

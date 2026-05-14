@@ -6,7 +6,6 @@
   const MAX_SUM = 99;
   const MIN_DECOMPOSE = 5;
   const SCORE_PER_UNIT = 10;
-  const GUIDE_LAST_CHALLENGE_INDEX = 9;
 
   const DIFFICULTY_TIER_2_AT = 400;
   const DIFFICULTY_TIER_3_AT = 1500;
@@ -244,7 +243,6 @@
   /** @type {{
    *   score: number,
    *   challengeIndex: number,
-   *   guideStep: number,
    *   mesaHintVisible: boolean,
    *   mysteryType: null | 'missing_addend' | 'missing_subtrahend' | 'missing_minuend',
    *   challengeOp: 'add' | 'subtract',
@@ -261,7 +259,6 @@
   const state = {
     score: 0,
     challengeIndex: 1,
-    guideStep: 0,
     mesaHintVisible: false,
     mysteryType: null,
     challengeOp: "add",
@@ -279,18 +276,14 @@
   let drag = null;
   let pendingMerge = null;
   let decomposeAnimating = false;
-  let helpStickySecondary = null;
 
   const els = {
     screenStart: document.getElementById("screen-start"),
     screenGame: document.getElementById("screen-game"),
     btnPlay: document.getElementById("btn-play"),
-    btnHome: document.getElementById("btn-home"),
     btnReset: document.getElementById("btn-reset"),
     btnNew: document.getElementById("btn-new"),
     btnHint: document.getElementById("btn-hint"),
-    btnGuideNext: document.getElementById("btn-guide-next"),
-    btnMysteryHelp: document.getElementById("btn-mystery-help"),
     hudScore: document.getElementById("hud-score"),
     hudChallenge: document.getElementById("hud-challenge"),
     hudStage: document.getElementById("hud-stage"),
@@ -301,10 +294,9 @@
     playSurface: document.getElementById("play-surface"),
     mesaHintBoard: document.getElementById("mesa-hint-board"),
     mesaHintEquation: document.getElementById("mesa-hint-equation"),
-    footerPrimary: document.getElementById("footer-instruction-primary"),
-    footerSecondary: document.getElementById("footer-instruction-secondary"),
     modal: document.getElementById("modal-success"),
-    modalMsg: document.getElementById("modal-success-msg"),
+    modalShowcase: document.getElementById("modal-success-showcase"),
+    modalDetail: document.getElementById("modal-success-detail"),
     modalNext: document.getElementById("modal-next"),
     mergeModal: document.getElementById("modal-merge"),
     mergeTitle: document.getElementById("modal-merge-title"),
@@ -320,10 +312,6 @@
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  function isGuidedChallenge() {
-    return state.challengeIndex <= GUIDE_LAST_CHALLENGE_INDEX;
-  }
-
   function playAreaRect() {
     return els.playSurface.getBoundingClientRect();
   }
@@ -332,15 +320,6 @@
     const start = name === "start";
     els.screenStart.hidden = !start;
     els.screenGame.hidden = start;
-    if (start) {
-      helpStickySecondary = null;
-      syncFooterInstruction();
-    }
-  }
-
-  function syncGuideUi() {
-    const show = isGuidedChallenge() && state.guideStep < 2;
-    els.btnGuideNext.hidden = !show;
   }
 
   function syncStageHud() {
@@ -368,15 +347,6 @@
     syncStageHud();
   }
 
-  function formatWorkspaceEquation() {
-    const L = state.workspaceLeft;
-    const R = state.workspaceRight;
-    if (state.workspaceChallengeOp === "subtract") {
-      return L + " − " + R + " = " + (L - R);
-    }
-    return L + " + " + R + " = " + (L + R);
-  }
-
   function formatWorkspaceTask() {
     const L = state.workspaceLeft;
     const R = state.workspaceRight;
@@ -389,88 +359,12 @@
     els.mesaHintBoard.hidden = !state.mesaHintVisible;
   }
 
-  function procedureExplanation() {
-    if (state.mysteryType === "missing_addend") {
-      return (
-        "Paso 1 — Procedimiento: en una suma con cajita, el número escondido es lo que falta " +
-        "para llegar al total. Para encontrarlo, en la mesa restás el número conocido del total."
-      );
-    }
-    if (state.mysteryType === "missing_subtrahend") {
-      return (
-        "Paso 1 — Procedimiento: si la cajita es lo que se quitó en una resta, pensá " +
-        "«grande − lo que quedó» → en la mesa restás el resultado del número grande."
-      );
-    }
-    if (state.mysteryType === "missing_minuend") {
-      return (
-        "Paso 1 — Procedimiento: si la cajita es el primer número de la resta, el comienzo " +
-        "es lo que quedó más lo que se quitó → en la mesa sumás esas dos piezas."
-      );
-    }
-    return "";
-  }
-
-  function mechanicsReminder() {
-    return (
-      "Paso 3 — En la mesa: tocá una burbuja sin arrastrar para partirla; arrastrá " +
-      "una burbuja sobre otra para juntar (como en Bubble Math Lab). Cuando quede solo una " +
-      "con el número de la cajita, ganás."
-    );
-  }
-
-  function buildPrimaryHelp() {
-    if (isGuidedChallenge()) {
-      if (state.guideStep === 0) return procedureExplanation();
-      if (state.guideStep === 1) {
-        return (
-          "Paso 2 — Para ver en grande la cuenta en la mesa, tocá el botón Pista (arriba aparece el letrero)."
-        );
-      }
-      return mechanicsReminder();
-    }
-    let short = "";
-    if (state.mysteryType === "missing_addend") {
-      short = "Cajita en suma: en la mesa restá el número conocido del total.";
-    } else if (state.mysteryType === "missing_subtrahend") {
-      short = "Cajita «lo quitado»: en la mesa restá el resultado del número grande.";
-    } else if (state.mysteryType === "missing_minuend") {
-      short = "Cajita al inicio: en la mesa sumá lo que quedó con lo que se quitó.";
-    }
-    return short + " Tocá Pista para ver la operación en grande dentro de la mesa.";
-  }
-
-  function setHelpStickySecondary(text) {
-    helpStickySecondary = text;
-    syncFooterInstruction();
-  }
-
-  function clearHelpStickySecondary() {
-    if (helpStickySecondary === null) return;
-    helpStickySecondary = null;
-    syncFooterInstruction();
-  }
-
-  function syncFooterInstruction() {
-    if (els.screenGame.hidden) return;
-    if (els.footerPrimary) {
-      els.footerPrimary.textContent = buildPrimaryHelp();
-    }
-    const sticky = helpStickySecondary;
-    const pistaLine =
-      state.mesaHintVisible && !sticky
-        ? "El resultado de esa operación es el número que va en la cajita. Objetivo: una sola burbuja con ese valor."
-        : "";
-    const secText = sticky || pistaLine;
-    if (els.footerSecondary) {
-      if (secText) {
-        els.footerSecondary.textContent = secText;
-        els.footerSecondary.hidden = false;
-      } else {
-        els.footerSecondary.textContent = "";
-        els.footerSecondary.hidden = true;
-      }
-    }
+  function syncHintToggleButton() {
+    if (!els.btnHint) return;
+    const on = state.mesaHintVisible;
+    els.btnHint.setAttribute("aria-pressed", on ? "true" : "false");
+    els.btnHint.textContent = on ? "Ocultar pista" : "Pista";
+    els.btnHint.classList.toggle("btn--hint-on", on);
   }
 
   function stageChallengePayload(resetIndex) {
@@ -512,26 +406,22 @@
 
   function startChallenge(resetIndex) {
     closeMergeModal();
-    clearHelpStickySecondary();
-    state.guideStep = 0;
-    state.mesaHintVisible = false;
+    state.mesaHintVisible = true;
     stageChallengePayload(resetIndex);
     state.bubbles = initialWorkspaceBubbleLayout();
     syncEquation();
     syncMesaHintBoard();
-    syncGuideUi();
+    syncHintToggleButton();
     renderBubbles();
-    syncFooterInstruction();
   }
 
   function resetTurn() {
     closeMergeModal();
-    clearHelpStickySecondary();
-    state.mesaHintVisible = false;
+    state.mesaHintVisible = true;
     syncMesaHintBoard();
+    syncHintToggleButton();
     state.bubbles = initialWorkspaceBubbleLayout();
     renderBubbles();
-    syncFooterInstruction();
   }
 
   function findBubble(id) {
@@ -662,7 +552,6 @@
   }
 
   function runMergeCore(pm) {
-    clearHelpStickySecondary();
     removeBubbleById(pm.idA);
     removeBubbleById(pm.idB);
     let newSource;
@@ -754,7 +643,6 @@
       createBubbleEl(b, hintStats);
     }
     checkPuzzleCompleteAuto();
-    syncFooterInstruction();
   }
 
   function bubbleCenterClient(b) {
@@ -858,20 +746,6 @@
     }
   }
 
-  function decomposeBlockedMessage(value) {
-    if (value < MIN_DECOMPOSE) {
-      return (
-        "Los números menores que " +
-        MIN_DECOMPOSE +
-        " no se parten acá. Juntalos con otra burbuja."
-      );
-    }
-    if (value === 5) {
-      return "El 5 es pieza base. Combiná con otra burbuja.";
-    }
-    return "Esa burbuja no se puede partir más. Juntala con otra.";
-  }
-
   function tryDecompose(b) {
     const parts = decomposePartsForBubble(b);
     if (!parts) {
@@ -881,7 +755,6 @@
         void bel.offsetWidth;
         bel.classList.add("bubble--shake");
       }
-      setHelpStickySecondary(decomposeBlockedMessage(b.value));
       return;
     }
     if (decomposeAnimating) return;
@@ -924,9 +797,6 @@
   }
 
   function feedbackBlockedSubtraction(b, partner) {
-    setHelpStickySecondary(
-      "No podés restar si el minuendo es más chico que el sustraendo rojo. Partí el celeste o sumá antes."
-    );
     for (const id of [b.id, partner.id]) {
       const bel = els.playSurface.querySelector('.bubble[data-id="' + id + '"]');
       if (bel) {
@@ -970,25 +840,66 @@
     return false;
   }
 
-  function mysterySuccessMessage() {
-    const line = formatWorkspaceEquation();
+  /**
+   * @param {HTMLElement} container
+   * @param {number} left
+   * @param {'add' | 'subtract'} op
+   * @param {number} right
+   * @param {number} result
+   * @param {{ rightIsSubtrahend?: boolean }} [opts]
+   */
+  function fillSuccessShowcase(container, left, op, right, result, opts) {
+    const rightIsSubtrahend = Boolean(opts && opts.rightIsSubtrahend);
+    container.replaceChildren();
+    const opChar = op === "subtract" ? "−" : "+";
+    const ariaOp = op === "subtract" ? "menos" : "más";
+
+    function bubble(n, variant) {
+      const wrap = document.createElement("span");
+      wrap.className = "modal-bubble-wrap";
+      const inner = document.createElement("span");
+      inner.className =
+        "modal-bubble__inner" +
+        (variant === "subtrahend"
+          ? " modal-bubble__inner--subtrahend"
+          : variant === "result"
+            ? " modal-bubble__inner--result"
+            : "");
+      inner.textContent = String(n);
+      wrap.appendChild(inner);
+      return wrap;
+    }
+    const opEl = document.createElement("span");
+    opEl.className = "modal-success-showcase__op";
+    opEl.textContent = opChar;
+    const eqEl = document.createElement("span");
+    eqEl.className = "modal-success-showcase__eq";
+    eqEl.textContent = "=";
+
+    container.appendChild(bubble(left, "operand"));
+    container.appendChild(opEl);
+    container.appendChild(bubble(right, rightIsSubtrahend ? "subtrahend" : "operand"));
+    container.appendChild(eqEl);
+    container.appendChild(bubble(result, "result"));
+
+    container.setAttribute(
+      "aria-label",
+      left + " " + ariaOp + " " + right + ", igual a " + result
+    );
+  }
+
+  function mysterySuccessDetail() {
     const h = state.hiddenValue;
     if (state.mysteryType === "missing_addend") {
-      return (
-        "La cajita era " +
-        h +
-        " porque " +
-        line +
-        " (lo que falta en la suma)."
-      );
+      return "La cajita era " + h + ": es la parte que faltaba en la suma.";
     }
     if (state.mysteryType === "missing_subtrahend") {
-      return "La cajita era " + h + " porque " + line + " (lo que se quitó).";
+      return "La cajita era " + h + ": es lo que se quitó en la resta.";
     }
     if (state.mysteryType === "missing_minuend") {
-      return "La cajita era " + h + " porque " + line + " (el número del inicio).";
+      return "La cajita era " + h + ": es el número que había al inicio.";
     }
-    return "¡Resolviste la cuenta de la cajita!";
+    return "Encontraste el número de la cajita.";
   }
 
   function spawnConfetti() {
@@ -1012,14 +923,22 @@
     closeMergeModal();
     state.score += (state.hiddenValue || 0) * SCORE_PER_UNIT;
     els.hudScore.textContent = String(state.score);
-    els.modalMsg.textContent = mysterySuccessMessage() + " Tenés " + state.score + " puntos.";
+    fillSuccessShowcase(
+      els.modalShowcase,
+      state.workspaceLeft,
+      state.workspaceChallengeOp,
+      state.workspaceRight,
+      /** @type {number} */ (state.hiddenValue),
+      { rightIsSubtrahend: state.workspaceChallengeOp === "subtract" }
+    );
+    els.modalDetail.textContent =
+      mysterySuccessDetail() + " Tienes " + state.score + " puntos en total.";
     els.modal.hidden = false;
     spawnConfetti();
   }
 
   function onBubblePointerDown(ev) {
     if (!els.mergeModal.hidden) return;
-    clearHelpStickySecondary();
     const el = ev.currentTarget;
     const b = findBubble(el.dataset.id);
     if (!b) return;
@@ -1121,12 +1040,6 @@
     startChallenge(false);
   });
 
-  els.btnHome.addEventListener("click", () => {
-    els.modal.hidden = true;
-    closeMergeModal();
-    showScreen("start");
-  });
-
   els.btnReset.addEventListener("click", resetTurn);
 
   els.btnNew.addEventListener("click", () => {
@@ -1134,26 +1047,10 @@
     startChallenge(false);
   });
 
-  els.btnGuideNext.addEventListener("click", () => {
-    if (!isGuidedChallenge()) return;
-    state.guideStep = Math.min(2, state.guideStep + 1);
-    syncGuideUi();
-    syncFooterInstruction();
-  });
-
   els.btnHint.addEventListener("click", () => {
-    state.mesaHintVisible = true;
+    state.mesaHintVisible = !state.mesaHintVisible;
     syncMesaHintBoard();
-    syncFooterInstruction();
-  });
-
-  els.btnMysteryHelp.addEventListener("click", () => {
-    clearHelpStickySecondary();
-    setHelpStickySecondary(
-      "En la mesa, las burbujas celestes siguen las reglas de Bubble Math Lab; las rojas son el sustraendo. " +
-        "Las rayas doradas y celestes marcan buenos cruces para juntar."
-    );
-    renderBubbles();
+    syncHintToggleButton();
   });
 
   els.modalNext.addEventListener("click", () => {
@@ -1190,6 +1087,4 @@
   document.addEventListener("pointermove", onPointerMove);
   document.addEventListener("pointerup", onPointerUp);
   document.addEventListener("pointercancel", onPointerUp);
-
-  syncFooterInstruction();
 })();

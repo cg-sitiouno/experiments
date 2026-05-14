@@ -806,7 +806,7 @@ body {
 
 .modal__card {
   position: relative;
-  width: min(400px, 100%);
+  width: min(440px, 100%);
   padding: 2rem 1.75rem;
   border-radius: 1.25rem;
   text-align: center;
@@ -822,8 +822,83 @@ body {
 
 .modal__text {
   margin: 0 0 1.25rem;
-  color: var(--text-muted);
   line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.modal-success-showcase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.6rem;
+  margin: 0 0 1.15rem;
+  padding: 1.2rem 0.95rem;
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.modal-bubble-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-bubble__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.15rem;
+  min-height: 3.15rem;
+  padding: 0 0.55rem;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 4.5vw, 1.85rem);
+  color: #0f172a;
+  border: 2px solid var(--bubble-border);
+  background: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.08) 45%, rgba(124, 255, 223, 0.22));
+  box-shadow: var(--shadow-glow), inset 0 -6px 16px rgba(15, 23, 42, 0.22);
+}
+
+.modal-bubble__inner--subtrahend {
+  border-color: rgba(248, 113, 113, 0.95);
+  background: radial-gradient(
+    circle at 30% 28%,
+    rgba(255, 255, 255, 0.48),
+    rgba(254, 202, 202, 0.28) 42%,
+    rgba(252, 165, 165, 0.22)
+  );
+  box-shadow:
+    0 0 18px rgba(239, 68, 68, 0.65),
+    inset 0 -6px 16px rgba(15, 23, 42, 0.22);
+}
+
+.modal-bubble__inner--result {
+  min-width: 3.45rem;
+  min-height: 3.45rem;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  border-color: rgba(253, 224, 71, 0.85);
+  background: radial-gradient(circle at 30% 25%, #fff, var(--accent-3) 40%, #f59e0b 100%);
+  box-shadow:
+    0 0 28px rgba(253, 224, 71, 0.55),
+    inset 0 -5px 14px rgba(180, 83, 9, 0.28);
+}
+
+.modal-success-showcase__op,
+.modal-success-showcase__eq {
+  font-size: clamp(1.3rem, 4vw, 1.75rem);
+  font-weight: 800;
+  color: var(--text-muted);
+  line-height: 1;
+  padding: 0 0.1rem;
+}
+
+.modal__text--success-detail {
+  margin: 0 0 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: 0.98rem;
 }
 
 .modal__title--sm {
