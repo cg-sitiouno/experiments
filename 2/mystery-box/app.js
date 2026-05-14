@@ -245,7 +245,7 @@
    *   score: number,
    *   challengeIndex: number,
    *   guideStep: number,
-   *   numericHintRevealed: boolean,
+   *   mesaHintVisible: boolean,
    *   mysteryType: null | 'missing_addend' | 'missing_subtrahend' | 'missing_minuend',
    *   challengeOp: 'add' | 'subtract',
    *   leftNumber: number | null,
@@ -262,7 +262,7 @@
     score: 0,
     challengeIndex: 1,
     guideStep: 0,
-    numericHintRevealed: false,
+    mesaHintVisible: false,
     mysteryType: null,
     challengeOp: "add",
     leftNumber: null,
@@ -298,10 +298,11 @@
     eqOp: document.getElementById("eq-op"),
     eqRight: document.getElementById("eq-right"),
     eqResult: document.getElementById("eq-result"),
-    helpPrimary: document.getElementById("help-primary"),
-    helpSecondary: document.getElementById("help-secondary"),
-    workspaceGoal: document.getElementById("workspace-goal"),
-    playArea: document.getElementById("play-area"),
+    playSurface: document.getElementById("play-surface"),
+    mesaHintBoard: document.getElementById("mesa-hint-board"),
+    mesaHintEquation: document.getElementById("mesa-hint-equation"),
+    footerPrimary: document.getElementById("footer-instruction-primary"),
+    footerSecondary: document.getElementById("footer-instruction-secondary"),
     modal: document.getElementById("modal-success"),
     modalMsg: document.getElementById("modal-success-msg"),
     modalNext: document.getElementById("modal-next"),
@@ -324,7 +325,7 @@
   }
 
   function playAreaRect() {
-    return els.playArea.getBoundingClientRect();
+    return els.playSurface.getBoundingClientRect();
   }
 
   function showScreen(name) {
@@ -333,7 +334,7 @@
     els.screenGame.hidden = start;
     if (start) {
       helpStickySecondary = null;
-      updateHelpBanner();
+      syncFooterInstruction();
     }
   }
 
@@ -382,12 +383,10 @@
     return state.workspaceChallengeOp === "subtract" ? L + " − " + R : L + " + " + R;
   }
 
-  function syncWorkspaceGoalText() {
-    const h = state.hiddenValue;
-    els.workspaceGoal.textContent =
-      "Objetivo en la mesa: una sola burbuja con " +
-      (h != null ? h : "?") +
-      " (el número de la cajita).";
+  function syncMesaHintBoard() {
+    if (!els.mesaHintBoard || !els.mesaHintEquation) return;
+    els.mesaHintEquation.textContent = formatWorkspaceTask();
+    els.mesaHintBoard.hidden = !state.mesaHintVisible;
   }
 
   function procedureExplanation() {
@@ -425,9 +424,7 @@
       if (state.guideStep === 0) return procedureExplanation();
       if (state.guideStep === 1) {
         return (
-          "Paso 2 — Cuenta en la mesa: resolvé " +
-          formatWorkspaceTask() +
-          " (tocá Pista si querés verla remarcada abajo)."
+          "Paso 2 — Para ver en grande la cuenta en la mesa, tocá el botón Pista (arriba aparece el letrero)."
         );
       }
       return mechanicsReminder();
@@ -440,57 +437,39 @@
     } else if (state.mysteryType === "missing_minuend") {
       short = "Cajita al inicio: en la mesa sumá lo que quedó con lo que se quitó.";
     }
-    return short + " Tocá Pista para ver la cuenta exacta.";
-  }
-
-  function buildHintStickyLine() {
-    return (
-      "Pista — Resolvé en la mesa: " +
-      formatWorkspaceTask() +
-      " → da " +
-      state.hiddenValue +
-      " (la cajita)."
-    );
-  }
-
-  function buildSecondaryDefault() {
-    if (state.numericHintRevealed || (isGuidedChallenge() && state.guideStep >= 1)) {
-      return buildHintStickyLine();
-    }
-    return "";
+    return short + " Tocá Pista para ver la operación en grande dentro de la mesa.";
   }
 
   function setHelpStickySecondary(text) {
     helpStickySecondary = text;
-    updateHelpBanner();
+    syncFooterInstruction();
   }
 
   function clearHelpStickySecondary() {
     if (helpStickySecondary === null) return;
     helpStickySecondary = null;
-    updateHelpBanner();
+    syncFooterInstruction();
   }
 
-  function updateHelpBanner() {
-    if (!els.helpPrimary || els.screenGame.hidden) return;
-    els.helpPrimary.textContent = buildPrimaryHelp();
-    const explicit = helpStickySecondary;
-    const def = buildSecondaryDefault();
-    if (explicit) {
-      els.helpSecondary.textContent = explicit;
-      els.helpSecondary.hidden = false;
-      els.helpSecondary.classList.remove("help-banner__secondary--muted", "help-banner__secondary--text");
-      els.helpSecondary.classList.add("help-banner__secondary--alert");
-    } else if (def.length > 0) {
-      els.helpSecondary.textContent = def;
-      els.helpSecondary.hidden = false;
-      els.helpSecondary.classList.remove("help-banner__secondary--muted", "help-banner__secondary--alert");
-      els.helpSecondary.classList.add("help-banner__secondary--text");
-    } else {
-      els.helpSecondary.textContent = "";
-      els.helpSecondary.hidden = true;
-      els.helpSecondary.classList.add("help-banner__secondary--muted");
-      els.helpSecondary.classList.remove("help-banner__secondary--alert", "help-banner__secondary--text");
+  function syncFooterInstruction() {
+    if (els.screenGame.hidden) return;
+    if (els.footerPrimary) {
+      els.footerPrimary.textContent = buildPrimaryHelp();
+    }
+    const sticky = helpStickySecondary;
+    const pistaLine =
+      state.mesaHintVisible && !sticky
+        ? "El resultado de esa operación es el número que va en la cajita. Objetivo: una sola burbuja con ese valor."
+        : "";
+    const secText = sticky || pistaLine;
+    if (els.footerSecondary) {
+      if (secText) {
+        els.footerSecondary.textContent = secText;
+        els.footerSecondary.hidden = false;
+      } else {
+        els.footerSecondary.textContent = "";
+        els.footerSecondary.hidden = true;
+      }
     }
   }
 
@@ -535,22 +514,24 @@
     closeMergeModal();
     clearHelpStickySecondary();
     state.guideStep = 0;
-    state.numericHintRevealed = false;
+    state.mesaHintVisible = false;
     stageChallengePayload(resetIndex);
     state.bubbles = initialWorkspaceBubbleLayout();
     syncEquation();
-    syncWorkspaceGoalText();
+    syncMesaHintBoard();
     syncGuideUi();
     renderBubbles();
-    updateHelpBanner();
+    syncFooterInstruction();
   }
 
   function resetTurn() {
     closeMergeModal();
     clearHelpStickySecondary();
+    state.mesaHintVisible = false;
+    syncMesaHintBoard();
     state.bubbles = initialWorkspaceBubbleLayout();
     renderBubbles();
-    updateHelpBanner();
+    syncFooterInstruction();
   }
 
   function findBubble(id) {
@@ -562,7 +543,7 @@
   }
 
   function clearBubbleEls() {
-    els.playArea.querySelectorAll(".bubble").forEach((n) => n.remove());
+    els.playSurface.querySelectorAll(".bubble").forEach((n) => n.remove());
   }
 
   function pxFromPercent(pxW, pxH, xPct, yPct) {
@@ -754,7 +735,7 @@
     el.appendChild(inner);
     placeBubbleEl(el, b.x, b.y);
     el.addEventListener("pointerdown", onBubblePointerDown);
-    els.playArea.appendChild(el);
+    els.playSurface.appendChild(el);
     return el;
   }
 
@@ -773,7 +754,7 @@
       createBubbleEl(b, hintStats);
     }
     checkPuzzleCompleteAuto();
-    updateHelpBanner();
+    syncFooterInstruction();
   }
 
   function bubbleCenterClient(b) {
@@ -822,7 +803,7 @@
     for (const id of childIds) {
       const b = findBubble(id);
       if (!b) continue;
-      const el = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      const el = els.playSurface.querySelector('.bubble[data-id="' + id + '"]');
       if (!el) continue;
       const fromX = ((parentX - b.x) / 100) * w;
       const fromY = ((parentY - b.y) / 100) * h;
@@ -872,7 +853,7 @@
       p.style.setProperty("--split-dx", Math.cos(ang) * dist + "px");
       p.style.setProperty("--split-dy", Math.sin(ang) * dist + "px");
       p.style.background = colors[i % colors.length];
-      els.playArea.appendChild(p);
+      els.playSurface.appendChild(p);
       window.setTimeout(() => p.remove(), 650);
     }
   }
@@ -894,7 +875,7 @@
   function tryDecompose(b) {
     const parts = decomposePartsForBubble(b);
     if (!parts) {
-      const bel = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+      const bel = els.playSurface.querySelector('.bubble[data-id="' + b.id + '"]');
       if (bel) {
         bel.classList.remove("bubble--shake");
         void bel.offsetWidth;
@@ -913,7 +894,7 @@
     const y2 = Math.min(86, oy + 6);
     const id1 = nextId();
     const id2 = nextId();
-    const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+    const el = els.playSurface.querySelector('.bubble[data-id="' + b.id + '"]');
     if (!el || prefersReducedMotion()) {
       decomposeAnimating = true;
       finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
@@ -947,7 +928,7 @@
       "No podés restar si el minuendo es más chico que el sustraendo rojo. Partí el celeste o sumá antes."
     );
     for (const id of [b.id, partner.id]) {
-      const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
+      const bel = els.playSurface.querySelector('.bubble[data-id="' + id + '"]');
       if (bel) {
         bel.classList.remove("bubble--shake");
         void bel.offsetWidth;
@@ -1072,7 +1053,7 @@
   }
 
   function clearMergeHighlights() {
-    els.playArea.querySelectorAll(".bubble--merge-target").forEach((n) => {
+    els.playSurface.querySelectorAll(".bubble--merge-target").forEach((n) => {
       n.classList.remove("bubble--merge-target");
     });
   }
@@ -1087,8 +1068,8 @@
       if (isBlockedSubtractionMerge(self, o)) continue;
       const c = bubbleCenterClient(o);
       if (distance(pt, c) < MERGE_DISTANCE_PX) {
-        const elA = els.playArea.querySelector('.bubble[data-id="' + activeId + '"]');
-        const elO = els.playArea.querySelector('.bubble[data-id="' + o.id + '"]');
+        const elA = els.playSurface.querySelector('.bubble[data-id="' + activeId + '"]');
+        const elO = els.playSurface.querySelector('.bubble[data-id="' + o.id + '"]');
         if (elA) elA.classList.add("bubble--merge-target");
         if (elO) elO.classList.add("bubble--merge-target");
         return;
@@ -1098,7 +1079,7 @@
 
   function onPointerMove(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
-    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
+    const el = els.playSurface.querySelector('.bubble[data-id="' + drag.id + '"]');
     const b = findBubble(drag.id);
     if (!el || !b) return;
     const dx = ev.clientX - drag.startClient.x;
@@ -1114,7 +1095,7 @@
 
   function onPointerUp(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
-    const el = els.playArea.querySelector('.bubble[data-id="' + drag.id + '"]');
+    const el = els.playSurface.querySelector('.bubble[data-id="' + drag.id + '"]');
     const b = findBubble(drag.id);
     const had = drag;
     drag = null;
@@ -1156,14 +1137,14 @@
   els.btnGuideNext.addEventListener("click", () => {
     if (!isGuidedChallenge()) return;
     state.guideStep = Math.min(2, state.guideStep + 1);
-    if (state.guideStep >= 1) state.numericHintRevealed = true;
     syncGuideUi();
-    updateHelpBanner();
+    syncFooterInstruction();
   });
 
   els.btnHint.addEventListener("click", () => {
-    state.numericHintRevealed = true;
-    setHelpStickySecondary(buildHintStickyLine());
+    state.mesaHintVisible = true;
+    syncMesaHintBoard();
+    syncFooterInstruction();
   });
 
   els.btnMysteryHelp.addEventListener("click", () => {
@@ -1210,5 +1191,5 @@
   document.addEventListener("pointerup", onPointerUp);
   document.addEventListener("pointercancel", onPointerUp);
 
-  updateHelpBanner();
+  syncFooterInstruction();
 })();

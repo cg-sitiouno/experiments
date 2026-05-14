@@ -169,6 +169,29 @@ body {
   color: var(--accent);
 }
 
+.equation-card {
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem 1rem 1.15rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(165deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 0 0 1px rgba(124, 255, 223, 0.12),
+    0 16px 48px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.equation-card__eyebrow {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-align: center;
+}
+
 .equation {
   display: flex;
   flex-wrap: wrap;
@@ -176,15 +199,36 @@ body {
   justify-content: center;
   gap: 0.45rem;
   width: 100%;
-  margin-bottom: 0.65rem;
+  margin: 0;
   font-size: clamp(1.2rem, 4vw, 1.75rem);
   font-weight: 800;
+}
+
+.equation--hero {
+  font-size: clamp(1.85rem, 7.5vw, 2.85rem);
+  gap: 0.55rem 0.65rem;
+  line-height: 1.15;
+}
+
+.equation--hero .equation__op,
+.equation--hero .equation__equals {
+  font-size: 0.88em;
+  opacity: 0.92;
 }
 
 .equation__part,
 .equation__result {
   min-width: 2.25rem;
   text-align: center;
+}
+
+.equation--hero .equation__part:not(.equation__part--mystery),
+.equation--hero .equation__result {
+  min-width: 2.75rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .equation__op,
@@ -195,6 +239,17 @@ body {
 
 .equation--mystery .equation__result {
   color: var(--text);
+}
+
+.equation--hero .equation__part--mystery {
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  font-size: 0.95em;
+  border-width: 3px;
+  box-shadow:
+    0 0 0 4px rgba(253, 224, 71, 0.22),
+    0 0 32px rgba(253, 224, 71, 0.5),
+    0 0 56px rgba(253, 224, 71, 0.2);
 }
 
 .equation__part--mystery {
@@ -214,58 +269,35 @@ body {
   animation: mystery-pulse 2.4s ease-in-out infinite;
 }
 
-.help-banner {
+.footer-instruction {
   width: 100%;
-  margin: 0 0 0.75rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 0.75rem;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  font-size: 0.92rem;
-  line-height: 1.45;
-}
-
-.help-banner__primary {
-  margin: 0;
-  color: var(--text);
-  font-weight: 700;
-}
-
-.help-banner__secondary {
-  margin: 0.4rem 0 0;
-  font-size: 0.88em;
-}
-
-.help-banner__secondary--muted {
-  color: var(--text-muted);
-}
-
-.help-banner__secondary--text {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.help-banner__secondary--alert {
-  color: #fecdd3;
-  font-weight: 600;
-}
-
-.workspace-goal {
-  width: 100%;
-  margin: 0 0 0.5rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: 0.65rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.35;
-  text-align: center;
-  color: var(--text-muted);
-  background: rgba(15, 23, 42, 0.45);
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.85rem;
+  background: rgba(15, 23, 42, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-instruction__primary {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.footer-instruction__secondary {
+  margin: 0.45rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fecdd3;
 }
 
 .play-area {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   flex: 1;
   min-height: clamp(280px, 46vh, 440px);
@@ -275,6 +307,51 @@ body {
   box-shadow: inset 0 0 60px rgba(124, 255, 223, 0.06);
   overflow: hidden;
   touch-action: none;
+}
+
+.mesa-hint-board {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem 0.75rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(253, 224, 71, 0.18), rgba(15, 23, 42, 0.5));
+  border-bottom: 2px solid rgba(253, 224, 71, 0.45);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+.mesa-hint-board[hidden] {
+  display: none !important;
+}
+
+.mesa-hint-board__kicker {
+  margin: 0;
+  font-size: clamp(0.95rem, 3.5vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-shadow: 0 0 24px rgba(253, 224, 71, 0.35);
+}
+
+.mesa-hint-board__equation {
+  margin: 0;
+  font-size: clamp(1.65rem, 6.5vw, 2.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  text-shadow:
+    0 0 20px rgba(124, 255, 223, 0.45),
+    0 0 40px rgba(192, 132, 252, 0.25);
+}
+
+.play-area__surface {
+  flex: 1;
+  position: relative;
+  min-height: 200px;
+  border-radius: 0 0 1.35rem 1.35rem;
 }
 
 @keyframes mystery-pulse {

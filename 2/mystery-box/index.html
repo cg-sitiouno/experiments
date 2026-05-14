@@ -41,33 +41,40 @@
           </div>
         </header>
 
-        <div id="equation" class="equation equation--mystery" aria-live="polite">
-          <span class="equation__part" id="eq-left">?</span>
-          <span class="equation__op" id="eq-op">+</span>
-          <span class="equation__part" id="eq-right">4</span>
-          <span class="equation__equals" aria-hidden="true">=</span>
-          <span class="equation__result" id="eq-result">8</span>
+        <div class="equation-card">
+          <p class="equation-card__eyebrow">Cuenta con cajita</p>
+          <div id="equation" class="equation equation--mystery equation--hero" aria-live="polite">
+            <span class="equation__part" id="eq-left">?</span>
+            <span class="equation__op" id="eq-op">+</span>
+            <span class="equation__part" id="eq-right">4</span>
+            <span class="equation__equals" aria-hidden="true">=</span>
+            <span class="equation__result" id="eq-result">8</span>
+          </div>
         </div>
-
-        <div id="help-banner" class="help-banner" role="status" aria-live="polite">
-          <p class="help-banner__primary" id="help-primary"></p>
-          <p class="help-banner__secondary help-banner__secondary--text" id="help-secondary" hidden></p>
-        </div>
-
-        <p id="workspace-goal" class="workspace-goal" aria-live="polite"></p>
 
         <div
           id="play-area"
           class="play-area"
           role="application"
-          aria-label="Área de burbujas. Tocá sin arrastrar para partir; arrastrá para juntar. Cuando quede una sola burbuja con el número de la cajita, superás el reto."
-        ></div>
+          aria-label="Mesa de trabajo con burbujas. Tocá sin arrastrar para partir; arrastrá para juntar. Mostrá la pista para ver la operación en grande arriba."
+        >
+          <div id="mesa-hint-board" class="mesa-hint-board" hidden>
+            <p class="mesa-hint-board__kicker">Resuelve la operación</p>
+            <p id="mesa-hint-equation" class="mesa-hint-board__equation"></p>
+          </div>
+          <div id="play-surface" class="play-area__surface"></div>
+        </div>
+
+        <div id="footer-instruction" class="footer-instruction" aria-live="polite">
+          <p id="footer-instruction-primary" class="footer-instruction__primary"></p>
+          <p id="footer-instruction-secondary" class="footer-instruction__secondary" hidden></p>
+        </div>
 
         <footer class="game-footer">
           <button type="button" id="btn-guide-next" class="btn btn--secondary" hidden>
             Siguiente paso
           </button>
-          <button type="button" id="btn-hint" class="btn btn--ghost">Pista (cuenta)</button>
+          <button type="button" id="btn-hint" class="btn btn--ghost">Pista</button>
           <button type="button" id="btn-mystery-help" class="btn btn--ghost">Ayúdame en la mesa</button>
           <button type="button" id="btn-reset" class="btn btn--ghost">Reiniciar turno</button>
           <button type="button" id="btn-new" class="btn btn--secondary">Nuevo reto</button>
