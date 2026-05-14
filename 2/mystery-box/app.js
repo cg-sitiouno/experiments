@@ -327,6 +327,7 @@
     screenStart: document.getElementById("screen-start"),
     screenGame: document.getElementById("screen-game"),
     btnPlay: document.getElementById("btn-play"),
+    btnHome: document.getElementById("btn-home"),
     btnReset: document.getElementById("btn-reset"),
     btnNew: document.getElementById("btn-new"),
     btnHint: document.getElementById("btn-hint"),
@@ -1102,12 +1103,20 @@
     if (tryMergeOrPlace(b, el, cx, cy, had)) return;
   }
 
+  function goToGameMenu() {
+    closeMergeModal();
+    els.modal.hidden = true;
+    showScreen("start");
+  }
+
   els.btnPlay.addEventListener("click", () => {
     state.score = 0;
     state.challengeIndex = 0;
     showScreen("game");
     startChallenge(false);
   });
+
+  els.btnHome.addEventListener("click", goToGameMenu);
 
   els.btnReset.addEventListener("click", resetTurn);
 

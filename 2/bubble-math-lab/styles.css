@@ -81,6 +81,32 @@ body {
   font-size: 1.05rem;
 }
 
+.panel__hub-nav {
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.link-to-hub {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-3);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.link-to-hub:hover {
+  color: #fef9c3;
+  border-bottom-color: rgba(253, 224, 71, 0.55);
+}
+
+.link-to-hub:focus-visible {
+  outline: 3px solid var(--accent-3);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -201,6 +227,14 @@ body {
   text-align: left;
   line-height: 1.55;
   margin-bottom: 1.35rem;
+}
+
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
 .btn {
