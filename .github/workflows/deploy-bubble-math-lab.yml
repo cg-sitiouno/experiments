@@ -1,9 +1,13 @@
-# Publica Bubble Math Lab en GitHub Pages (la carpeta 2/bubble-math-lab es la raíz del sitio).
+# Publica el hub de juegos (selector) + Bubble Math Lab + Mystery Box en GitHub Pages.
+# Se arma _site/ solo con index.html, game-select.css y las dos carpetas de juego
+# (no se suben specs ni markdown internos).
 #
-# Tras el primer push: Repo → Settings → Pages → Build and deployment → Source: GitHub Actions.
-# URL típica: https://cg-sitiouno.github.io/experiments/
+# Tras el push: Repo → Settings → Pages → Source: GitHub Actions.
+# URL típica: https://<usuario>.github.io/experiments/
+#
+# Enlaces relativos: bubble-math-lab/, mystery-box/, game-select.css en la raíz del deploy.
 
-name: Deploy Bubble Math Lab
+name: Deploy math games hub
 
 on:
   push:
@@ -16,7 +20,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-bubble-math-lab
+  group: pages-experiments-hub
   cancel-in-progress: false
 
 jobs:
@@ -32,10 +36,16 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Prepare site (hub + juegos, sin specs ni planes)
+        run: |
+          mkdir -p _site
+          cp -f 2/index.html 2/game-select.css _site/
+          cp -r 2/bubble-math-lab 2/mystery-box _site/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 2/bubble-math-lab
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

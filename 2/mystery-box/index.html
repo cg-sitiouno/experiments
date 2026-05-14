@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cajita Misteriosa — Mystery Box</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section id="screen-start" class="screen" aria-label="Inicio">
+        <div class="panel panel--hero">
+          <h1 class="title-glow">Cajita Misteriosa</h1>
+          <p class="tagline title-sub">Mystery Box — encontrá el número escondido usando la mesa de burbujas.</p>
+          <p class="hint--start">
+            Cada tipo de cajita tiene su procedimiento: te guiamos al principio. En la mesa resolvés la misma
+            cuenta que en Bubble Math Lab (partir y juntar burbujas).
+          </p>
+          <button type="button" id="btn-play" class="btn btn--primary">Jugar</button>
+        </div>
+      </section>
+
+      <section id="screen-game" class="screen screen--game" aria-label="Juego" hidden>
+        <header class="game-header">
+          <div class="game-header__cell">
+            <span class="pill pill--score"
+              >Puntos <strong id="hud-score" class="hud-score" aria-live="polite">0</strong></span
+            >
+          </div>
+          <div class="game-header__cell game-header__cell--center">
+            <span class="pill">Reto <strong id="hud-challenge">1</strong></span>
+          </div>
+          <div class="game-header__cell game-header__cell--right">
+            <span class="pill pill--tier" id="hud-stage" aria-live="polite">Nivel 1</span>
+          </div>
+        </header>
+
+        <div class="equation-card">
+          <p class="equation-card__eyebrow">Cuenta con cajita</p>
+          <div id="equation" class="equation equation--mystery equation--hero" aria-live="polite">
+            <span class="equation__part" id="eq-left">?</span>
+            <span class="equation__op" id="eq-op">+</span>
+            <span class="equation__part" id="eq-right">4</span>
+            <span class="equation__equals" aria-hidden="true">=</span>
+            <span class="equation__result" id="eq-result">8</span>
+          </div>
+        </div>
+
+        <div
+          id="play-area"
+          class="play-area"
+          role="application"
+          aria-label="Mesa de trabajo con burbujas. Tocá sin arrastrar para partir; arrastrá para juntar. Mostrá la pista para ver la operación en grande arriba."
+        >
+          <div id="mesa-hint-board" class="mesa-hint-board" hidden>
+            <p class="mesa-hint-board__kicker">Resuelve la operación</p>
+            <p id="mesa-hint-equation" class="mesa-hint-board__equation"></p>
+          </div>
+          <div id="play-surface" class="play-area__surface"></div>
+        </div>
+
+        <footer class="game-footer">
+          <button
+            type="button"
+            id="btn-hint"
+            class="btn btn--ghost"
+            aria-pressed="false"
+            aria-controls="mesa-hint-board"
+          >
+            Pista
+          </button>
+          <button type="button" id="btn-reset" class="btn btn--ghost">Reiniciar</button>
+          <button type="button" id="btn-new" class="btn btn--secondary">Nuevo reto</button>
+        </footer>
+      </section>
+    </div>
+
+    <div
+      id="modal-success"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-success-title"
+      hidden
+    >
+      <div class="modal__backdrop" aria-hidden="true"></div>
+      <div class="modal__card">
+        <h2 id="modal-success-title" class="modal__title">¡Lo encontraste!</h2>
+        <div
+          id="modal-success-showcase"
+          class="modal-success-showcase"
+          role="group"
+          aria-label=""
+        ></div>
+        <p id="modal-success-detail" class="modal__text modal__text--success-detail"></p>
+        <button type="button" id="modal-next" class="btn btn--primary">Siguiente reto</button>
+      </div>
+    </div>
+
+    <div
+      id="modal-merge"
+      class="modal modal--merge"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-merge-title"
+      hidden
+    >
+      <div class="modal__backdrop" data-close-merge></div>
+      <div class="modal__card modal__card--compact">
+        <h2 id="modal-merge-title" class="modal__title modal__title--sm">Unir burbujas</h2>
+        <p class="modal__text modal__text--merge" id="modal-merge-hint">Escribí el resultado.</p>
+        <p class="merge-prompt" id="modal-merge-prompt" aria-live="polite">0 + 0</p>
+        <form id="form-merge" class="merge-form" novalidate>
+          <label class="merge-form__label" for="merge-answer">Resultado</label>
+          <input
+            type="number"
+            id="merge-answer"
+            class="merge-form__input"
+            inputmode="numeric"
+            autocomplete="off"
+            enterkeyhint="done"
+            aria-describedby="merge-feedback"
+          />
+          <p id="merge-feedback" class="merge-form__feedback" role="alert" hidden></p>
+          <div class="merge-form__actions">
+            <button type="submit" class="btn btn--primary" id="merge-submit">Comprobar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="confetti-root" class="confetti-root" aria-hidden="true"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

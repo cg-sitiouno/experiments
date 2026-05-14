@@ -1,0 +1,189 @@
+/* Hub de selección — tarjetas tipo ícono / videojuego educativo */
+
+:root {
+  --bg-deep: #0c0618;
+  --bg-mid: #1a0f35;
+  --text: #f4f7ff;
+  --muted: rgba(232, 238, 255, 0.72);
+  --cyan: #5cffe8;
+  --violet: #a78bfa;
+  --pink: #f472b6;
+  --gold: #fde047;
+  --card-radius: 28px;
+  --font: "Nunito", system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font);
+  color: var(--text);
+  background: radial-gradient(ellipse 120% 80% at 50% -20%, #3d2a6e 0%, transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 60%, rgba(124, 58, 237, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 0% 80%, rgba(6, 182, 212, 0.2) 0%, transparent 45%),
+    linear-gradient(165deg, var(--bg-deep) 0%, var(--bg-mid) 45%, #0f0822 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+.game-select {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.game-select__header {
+  text-align: center;
+  margin-bottom: clamp(2rem, 5vw, 3rem);
+}
+
+.game-select__header h1 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 40px rgba(94, 234, 212, 0.35), 0 0 80px rgba(167, 139, 250, 0.2);
+}
+
+.game-select__header p {
+  margin: 0 auto;
+  max-width: 36rem;
+  font-size: clamp(0.98rem, 2vw, 1.08rem);
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.game-select__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: clamp(1.25rem, 3vw, 2rem);
+  justify-items: center;
+  align-items: stretch;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1.15;
+  padding: 1.15rem 1rem 1.25rem;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  font: inherit;
+  border-radius: var(--card-radius);
+  background: radial-gradient(ellipse 100% 120% at 50% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 52%),
+    radial-gradient(ellipse 80% 80% at 80% 100%, rgba(94, 234, 212, 0.08) 0%, transparent 45%),
+    linear-gradient(155deg, rgba(30, 20, 55, 0.95) 0%, rgba(12, 8, 28, 0.98) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset,
+    0 0 48px rgba(94, 234, 212, 0.12);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(94, 234, 212, 0.35);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 64px rgba(94, 234, 212, 0.22),
+    0 0 80px rgba(167, 139, 250, 0.15);
+}
+
+.game-card:focus {
+  outline: none;
+}
+
+.game-card:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-card {
+    transition: none;
+  }
+
+  .game-card:hover {
+    transform: none;
+  }
+}
+
+.game-card--bubble {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(6, 182, 212, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--bubble:hover {
+  border-color: rgba(94, 234, 212, 0.45);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(6, 182, 212, 0.28),
+    0 0 72px rgba(167, 139, 250, 0.2);
+}
+
+.game-card--mystery {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(253, 224, 71, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--mystery:hover {
+  border-color: rgba(253, 224, 71, 0.4);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(253, 224, 71, 0.22),
+    0 0 64px rgba(244, 114, 182, 0.18);
+}
+
+/* Ilustración ~65–70% de la tarjeta */
+.game-card__art {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.35rem;
+}
+
+.game-card__art svg {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  display: block;
+}
+
+.game-card__title {
+  margin: 0 0 0.28rem;
+  font-size: clamp(1.05rem, 2.8vw, 1.2rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.game-card__tagline {
+  margin: 0;
+  font-size: clamp(0.82rem, 2vw, 0.9rem);
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.35;
+  max-width: 15rem;
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Elige Bubble Math Lab o Mystery Box: práctica de cálculo mental con burbujas y retos con número escondido."
+    />
+    <title>Juegos de mate — Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="game-select.css" />
+  </head>
+  <body>
+    <section class="game-select" aria-label="Selección de juego">
+      <header class="game-select__header">
+        <h1>Elige tu aventura</h1>
+        <p>
+          Rompe burbujas, descubre números escondidos y domina el cálculo mental.
+        </p>
+      </header>
+
+      <div class="game-select__grid">
+        <a
+          class="game-card game-card--bubble"
+          href="bubble-math-lab/index.html"
+          aria-label="Abrir Bubble Math Lab — romper y combinar números"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <!-- Arte vectorial (podés reemplazar por <img class="game-card__art-img" src="assets/bubble-card.png" alt="">) -->
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Burbujas y descomposición del 67</title>
+              <defs>
+                <radialGradient id="bb-main" cx="35%" cy="30%" r="65%">
+                  <stop offset="0%" stop-color="#e8fffc" />
+                  <stop offset="45%" stop-color="#7cffdf" />
+                  <stop offset="100%" stop-color="#22d3ee" />
+                </radialGradient>
+                <radialGradient id="bb-small" cx="35%" cy="28%" r="70%">
+                  <stop offset="0%" stop-color="#fff" stop-opacity="0.95" />
+                  <stop offset="100%" stop-color="#c4b5fd" />
+                </radialGradient>
+                <filter id="bb-glow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="2.5" result="b" />
+                  <feMerge>
+                    <feMergeNode in="b" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <!-- partículas -->
+              <g opacity="0.7">
+                <circle cx="28" cy="42" r="2" fill="#f472b6" />
+                <circle cx="168" cy="36" r="1.8" fill="#fde047" />
+                <circle cx="178" cy="118" r="1.5" fill="#5cffe8" />
+                <circle cx="22" cy="150" r="1.6" fill="#a78bfa" />
+              </g>
+              <!-- burbujas mini -->
+              <g filter="url(#bb-glow)">
+                <circle cx="44" cy="152" r="16" fill="url(#bb-small)" stroke="#7cffdf" stroke-width="1.5" opacity="0.95" />
+                <text x="44" y="157" text-anchor="middle" font-size="13" font-family="Nunito, sans-serif" font-weight="800" fill="#1e1b4b">10</text>
+                <circle cx="158" cy="148" r="14" fill="url(#bb-small)" stroke="#c4b5fd" stroke-width="1.5" opacity="0.92" />
+                <text x="158" y="153" text-anchor="middle" font-size="12" font-family="Nunito, sans-serif" font-weight="800" fill="#1e1b4b">5</text>
+              </g>
+              <!-- 60 + 7 -->
+              <g>
+                <circle cx="78" cy="118" r="22" fill="url(#bb-small)" stroke="#a78bfa" stroke-width="2" />
+                <text x="78" y="124" text-anchor="middle" font-size="15" font-family="Nunito, sans-serif" font-weight="800" fill="#312e81">60</text>
+                <text x="108" y="126" text-anchor="middle" font-size="18" font-weight="800" fill="#94a3b8">+</text>
+                <circle cx="138" cy="118" r="20" fill="url(#bb-small)" stroke="#f472b6" stroke-width="2" />
+                <text x="138" y="124" text-anchor="middle" font-size="15" font-family="Nunito, sans-serif" font-weight="800" fill="#312e81">7</text>
+              </g>
+              <!-- principal 67 -->
+              <g filter="url(#bb-glow)">
+                <circle cx="108" cy="68" r="38" fill="url(#bb-main)" stroke="#0e7490" stroke-width="2.5" />
+                <text x="108" y="80" text-anchor="middle" font-size="28" font-family="Nunito, sans-serif" font-weight="800" fill="#0f172a">67</text>
+              </g>
+            </svg>
+          </div>
+          <h2 class="game-card__title">Bubble Math Lab</h2>
+          <p class="game-card__tagline">Rompe y combina números</p>
+        </a>
+
+        <a
+          class="game-card game-card--mystery"
+          href="mystery-box/index.html"
+          aria-label="Abrir Mystery Box — descubre el número escondido"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Cajita mágica y burbuja misteriosa</title>
+              <defs>
+                <linearGradient id="mb-box" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#6b21a8" />
+                  <stop offset="100%" stop-color="#3b0764" />
+                </linearGradient>
+                <radialGradient id="mb-q" cx="35%" cy="28%" r="60%">
+                  <stop offset="0%" stop-color="#fff9c4" />
+                  <stop offset="100%" stop-color="#fde047" />
+                </radialGradient>
+                <filter id="mb-glow" x="-35%" y="-35%" width="170%" height="170%">
+                  <feGaussianBlur stdDeviation="2" result="g" />
+                  <feMerge>
+                    <feMergeNode in="g" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <!-- símbolos suaves -->
+              <text x="36" y="48" font-size="14" fill="#a78bfa" opacity="0.35" font-weight="800">?</text>
+              <text x="158" y="56" font-size="12" fill="#5cffe8" opacity="0.28" font-weight="800">+</text>
+              <text x="170" y="170" font-size="11" fill="#f472b6" opacity="0.28" font-weight="800">−</text>
+              <!-- caja -->
+              <g filter="url(#mb-glow)">
+                <path
+                  d="M55 115 L100 95 L145 115 L145 158 L55 158 Z"
+                  fill="url(#mb-box)"
+                  stroke="#fde047"
+                  stroke-width="2"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M55 115 L100 95 L145 115 L100 135 Z"
+                  fill="#862ea8"
+                  stroke="#f9a8d4"
+                  stroke-width="1.2"
+                  opacity="0.9"
+                />
+                <ellipse cx="100" cy="158" rx="46" ry="10" fill="#000" opacity="0.35" />
+              </g>
+              <!-- burbuja ? -->
+              <g filter="url(#mb-glow)">
+                <circle cx="100" cy="62" r="34" fill="url(#mb-q)" stroke="#ca8a04" stroke-width="2.2" />
+                <text x="100" y="74" text-anchor="middle" font-size="34" font-family="Nunito, sans-serif" font-weight="800" fill="#422006">?</text>
+              </g>
+              <!-- mini burbujas -->
+              <circle cx="38" cy="132" r="12" fill="#5cffe8" fill-opacity="0.35" stroke="#5cffe8" stroke-width="1.5" />
+              <text x="38" y="136" text-anchor="middle" font-size="10" font-weight="800" fill="#e0f2fe">4</text>
+              <circle cx="164" cy="124" r="13" fill="#f472b6" fill-opacity="0.4" stroke="#f9a8d4" stroke-width="1.5" />
+              <text x="164" y="128" text-anchor="middle" font-size="11" font-weight="800" fill="#fce7f3">8</text>
+              <circle cx="154" cy="178" r="11" fill="#a78bfa" fill-opacity="0.45" stroke="#ddd6fe" stroke-width="1.5" />
+              <text x="154" y="182" text-anchor="middle" font-size="10" font-weight="800" fill="#f5f3ff">10</text>
+              <!-- easter egg 67 dorado pequeño -->
+              <circle cx="48" cy="82" r="9" fill="#fde047" stroke="#ca8a04" stroke-width="1.2" opacity="0.95" />
+              <text x="48" y="86" text-anchor="middle" font-size="8" font-weight="800" fill="#713f12">67</text>
+            </svg>
+          </div>
+          <h2 class="game-card__title">Mystery Box</h2>
+          <p class="game-card__tagline">Descubre el número escondido</p>
+        </a>
+      </div>
+    </section>
+  </body>
+</html>
