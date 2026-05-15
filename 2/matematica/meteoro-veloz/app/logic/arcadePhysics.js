@@ -9,6 +9,15 @@ export function arcadeRadiusPx(v) {
   return 14 + Math.min(28, Math.sqrt(n) * 4.25);
 }
 
+/**
+ * Radio usado en física / colisiones. El proyectil −1 (`peelBolt`, value −1) cuenta como talla 1
+ * (misma regla que `syncArcadeBodyDom` en la vista).
+ * @param {{ value: number, peelBolt?: boolean }} b
+ */
+export function effectiveArcadeRadius(b) {
+  return arcadeRadiusPx(b.peelBolt ? 1 : b.value);
+}
+
 export function bounceNonMerge(a, b, ra, rb, d) {
   const minD = ra + rb;
   if (d >= minD) return;
@@ -42,7 +51,7 @@ export function bounceNonMerge(a, b, ra, rb, d) {
  *   maxSpeed: number,
  *   syncDom: (b: object) => void,
  *   removeBolt: (bolt: object) => void,
- *   peelBubbleInPlace: (bubble: object) => void,
+ *   peelBubbleHitByBolt: (bubble: object) => void,
  *   mergeBodiesKeepFirst: (keep: object, drop: object) => void,
  * }} ctx
  */
@@ -56,7 +65,7 @@ export function arcadePhysicsStep(bodies, ctx) {
     maxSpeed,
     syncDom,
     removeBolt,
-    peelBubbleInPlace,
+    peelBubbleHitByBolt,
     mergeBodiesKeepFirst,
   } = ctx;
 
@@ -70,7 +79,7 @@ export function arcadePhysicsStep(bodies, ctx) {
     }
     b.x += b.vx * dt;
     b.y += b.vy * dt;
-    const r = arcadeRadiusPx(b.value);
+    const r = effectiveArcadeRadius(b);
     if (b.x - r < 0) {
       b.x = r;
       b.vx *= -wallBounce;
@@ -96,8 +105,8 @@ export function arcadePhysicsStep(bodies, ctx) {
       for (let j = i + 1; j < bodies.length; j++) {
         const a = bodies[i];
         const b = bodies[j];
-        const ra = arcadeRadiusPx(a.value);
-        const rb = arcadeRadiusPx(b.value);
+        const ra = effectiveArcadeRadius(a);
+        const rb = effectiveArcadeRadius(b);
         const d = Math.hypot(b.x - a.x, b.y - a.y);
         if (d >= ra + rb - 1) continue;
         const pa = !!a.peelBolt;
@@ -108,10 +117,10 @@ export function arcadePhysicsStep(bodies, ctx) {
           syncDom(b);
           continue;
         }
+        // Proyectil −1 vs burbuja: si talla ≤ 1, rebote; si > 1, consume el bolt y resta 1 en la misma burbuja (sin spawneear un 1).
         if (pa !== pb) {
           const bolt = pa ? a : b;
           const bubble = pa ? b : a;
-          if (bubble.peelBolt) continue;
           if (bubble.value <= 1) {
             bounceNonMerge(a, b, ra, rb, d || 0.001);
             syncDom(a);
@@ -119,7 +128,7 @@ export function arcadePhysicsStep(bodies, ctx) {
             continue;
           }
           removeBolt(bolt);
-          peelBubbleInPlace(bubble);
+          peelBubbleHitByBolt(bubble);
           mergedAny = true;
           break outer;
         }
@@ -141,8 +150,8 @@ export function arcadePhysicsStep(bodies, ctx) {
       for (let j = i + 1; j < bodies.length; j++) {
         const a = bodies[i];
         const b = bodies[j];
-        const ra = arcadeRadiusPx(a.value);
-        const rb = arcadeRadiusPx(b.value);
+        const ra = effectiveArcadeRadius(a);
+        const rb = effectiveArcadeRadius(b);
         if (a.peelBolt || b.peelBolt) continue;
         const d = Math.hypot(b.x - a.x, b.y - a.y) || 0.001;
         if (d < ra + rb - 0.5 && a.value !== 1 && b.value !== 1) {

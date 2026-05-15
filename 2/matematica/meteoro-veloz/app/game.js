@@ -12,7 +12,11 @@ import {
 } from "./config.js";
 import { createInitialState } from "./state/gameState.js";
 import { makeQuestion } from "./domain/question.js";
-import { arcadePhysicsStep, arcadeRadiusPx } from "./logic/arcadePhysics.js";
+import {
+  arcadePhysicsStep,
+  arcadeRadiusPx,
+  effectiveArcadeRadius,
+} from "./logic/arcadePhysics.js";
 
 let st = createInitialState();
 let els;
@@ -283,7 +287,7 @@ function openSumMergeModal(elA, elB) {
 
 // ── Paso 1: minijuego arcade (cañón + física) ────────────────────────────────
 
-/** @type {"shoot" | "peel" | "group"} */
+/** @type {"shoot" | "peel"} */
 let arcadeWeapon = "shoot";
 let arcadeAmmoLeft = 0;
 /** @type {Array<{ el: HTMLButtonElement, x: number, y: number, vx: number, vy: number, value: number }>} */
@@ -295,7 +299,281 @@ let arcadePhysicsLastT = 0;
 let arcadeTouchPointer = null;
 let arcadeSuppressClickUntil = 0;
 
-/** Emulación móvil / pantallas táctiles: el ratón sigue siendo pointerType "mouse". */
+/** @type {{ body: object, pointerId: number, startX: number, startY: number, dragging: boolean, clone: HTMLElement | null } | null} */
+let arcadeBubbleDrag = null;
+
+/** @type {{ chip: HTMLElement, pointerId: number, startX: number, startY: number, dragging: boolean, clone: HTMLElement | null } | null} */
+let rackChipDrag = null;
+
+function pointInRect(clientX, clientY, rect) {
+  return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+}
+
+function resetRackLockIfEmpty() {
+  if (els.collectionZone.children.length === 0) {
+    st.analyzerLockedSize = null;
+    st.analyzerGroupsTarget = 0;
+  }
+}
+
+/**
+ * Suelta la burbuja en la canasta si cumple las reglas (N = factor a o b; mismo N tras el primer grupo).
+ * @returns {boolean} true si entró en la canasta
+ */
+function tryCommitBodyToCollection(body) {
+  if (body.peelBolt) {
+    shakeElement(body.el);
+    showPhase1CollectError("El proyectil no va a la canasta.");
+    return false;
+  }
+  const v = body.value;
+  const { a, b: bf } = st.q;
+  if (st.analyzerLockedSize == null) {
+    if (v !== a && v !== bf) {
+      shakeElement(body.el);
+      showPhase1CollectError(`Solo grupos de ${a} o ${bf}.`);
+      return false;
+    }
+    st.analyzerLockedSize = v;
+    st.analyzerGroupsTarget = v === a ? bf : a;
+  } else if (v !== st.analyzerLockedSize) {
+    shakeElement(body.el);
+    showPhase1CollectError(`Ya elegiste tamaño ${st.analyzerLockedSize}. No podés mezclar con ${v}.`);
+    return false;
+  }
+  if (els.collectionZone.children.length >= st.analyzerGroupsTarget) {
+    shakeElement(body.el);
+    showPhase1CollectError("Canasta llena.");
+    return false;
+  }
+  const idx = arcadeBodies.indexOf(body);
+  if (idx >= 0) arcadeBodies.splice(idx, 1);
+  body.el.remove();
+  const chip = document.createElement("div");
+  chip.className = "arcade-group-chip";
+  chip.dataset.value = String(v);
+  chip.textContent = String(v);
+  chip.setAttribute("aria-label", `Grupo de ${v}`);
+  chip.setAttribute("role", "button");
+  chip.tabIndex = 0;
+  bindCollectionChipPointer(chip);
+  els.collectionZone.appendChild(chip);
+  updateAnalyzerCollectFooter();
+  return true;
+}
+
+function arcadeDetachBodyForDrag(body) {
+  const idx = arcadeBodies.indexOf(body);
+  if (idx >= 0) arcadeBodies.splice(idx, 1);
+  body.el.classList.add("arcade-bubble--drag-source");
+  body.el.style.opacity = "0.28";
+  body.el.style.pointerEvents = "none";
+}
+
+function bindCollectionChipPointer(chip) {
+  chip.addEventListener("pointerdown", onRackChipPointerDown);
+}
+
+function onRackChipPointerDown(e) {
+  if (st.analyzerPhase !== 1) return;
+  e.stopPropagation();
+  const chip = /** @type {HTMLElement} */ (e.currentTarget);
+  rackChipDrag = {
+    chip,
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    dragging: false,
+    clone: null,
+  };
+  try {
+    chip.setPointerCapture(e.pointerId);
+  } catch (_) {}
+  chip.addEventListener("pointermove", onRackChipDragMove);
+  chip.addEventListener("pointerup", onRackChipDragEnd);
+  chip.addEventListener("pointercancel", onRackChipDragEnd);
+}
+
+function onRackChipDragMove(e) {
+  const d = rackChipDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+  if (!d.dragging && dist >= DRAG_THRESHOLD_PX) {
+    d.dragging = true;
+    const br = d.chip.getBoundingClientRect();
+    d.clone = d.chip.cloneNode(true);
+    d.clone.classList.add("arcade-group-chip--drag-clone");
+    d.clone.removeAttribute("id");
+    Object.assign(d.clone.style, {
+      position: "fixed",
+      left: `${br.left}px`,
+      top: `${br.top}px`,
+      width: `${br.width}px`,
+      height: `${br.height}px`,
+      margin: "0",
+      pointerEvents: "none",
+      zIndex: "10000",
+      boxSizing: "border-box",
+    });
+    document.body.appendChild(d.clone);
+    d.chip.style.opacity = "0.35";
+  }
+  if (d.dragging && d.clone) {
+    const w = d.clone.offsetWidth;
+    const h = d.clone.offsetHeight;
+    d.clone.style.left = `${e.clientX - w / 2}px`;
+    d.clone.style.top = `${e.clientY - h / 2}px`;
+  }
+}
+
+function onRackChipDragEnd(e) {
+  const d = rackChipDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  const chip = d.chip;
+  chip.removeEventListener("pointermove", onRackChipDragMove);
+  chip.removeEventListener("pointerup", onRackChipDragEnd);
+  chip.removeEventListener("pointercancel", onRackChipDragEnd);
+  try {
+    chip.releasePointerCapture(e.pointerId);
+  } catch (_) {}
+
+  if (d.clone) {
+    d.clone.remove();
+    d.clone = null;
+  }
+  chip.style.opacity = "";
+
+  if (d.dragging) {
+    const fieldRect = els.arcadeField.getBoundingClientRect();
+    if (pointInRect(e.clientX, e.clientY, fieldRect)) {
+      const v = Number(chip.dataset.value);
+      chip.remove();
+      resetRackLockIfEmpty();
+      const field = els.arcadeField;
+      const fr = field.getBoundingClientRect();
+      const x = Math.max(
+        28,
+        Math.min(fr.width - 28, e.clientX - fr.left + field.scrollLeft),
+      );
+      const y = Math.max(
+        28,
+        Math.min(fr.height - 28, e.clientY - fr.top + field.scrollTop),
+      );
+      arcadeCreateBody(x, y, v, (Math.random() - 0.5) * 55, (Math.random() - 0.5) * 55);
+      updateAnalyzerCollectFooter();
+    }
+  }
+
+  rackChipDrag = null;
+}
+
+function arcadeBubbleDragMove(e) {
+  const d = arcadeBubbleDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+  if (!d.dragging && dist >= DRAG_THRESHOLD_PX) {
+    d.dragging = true;
+    arcadeDetachBodyForDrag(d.body);
+    const br = d.body.el.getBoundingClientRect();
+    d.clone = d.body.el.cloneNode(true);
+    d.clone.classList.add("arcade-bubble--drag-clone");
+    d.clone.removeAttribute("id");
+    Object.assign(d.clone.style, {
+      position: "fixed",
+      left: `${br.left}px`,
+      top: `${br.top}px`,
+      width: `${br.width}px`,
+      height: `${br.height}px`,
+      margin: "0",
+      padding: "0",
+      pointerEvents: "none",
+      zIndex: "10000",
+      boxSizing: "border-box",
+    });
+    document.body.appendChild(d.clone);
+  }
+  if (d.dragging && d.clone) {
+    const w = d.clone.offsetWidth;
+    const h = d.clone.offsetHeight;
+    d.clone.style.left = `${e.clientX - w / 2}px`;
+    d.clone.style.top = `${e.clientY - h / 2}px`;
+  }
+}
+
+function arcadeBubbleDragEnd(e) {
+  const d = arcadeBubbleDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  const body = d.body;
+  const el = body.el;
+  try {
+    el.releasePointerCapture(e.pointerId);
+  } catch (_) {}
+  el.removeEventListener("pointermove", arcadeBubbleDragMove);
+  el.removeEventListener("pointerup", arcadeBubbleDragEnd);
+  el.removeEventListener("pointercancel", arcadeBubbleDragEnd);
+
+  if (d.clone) {
+    d.clone.remove();
+    d.clone = null;
+  }
+
+  if (d.dragging) {
+    el.classList.remove("arcade-bubble--drag-source");
+    el.style.opacity = "";
+    el.style.pointerEvents = "";
+
+    const rackRect = els.collectionZone.getBoundingClientRect();
+    const fieldRect = els.arcadeField.getBoundingClientRect();
+    const overRack = pointInRect(e.clientX, e.clientY, rackRect);
+
+    if (overRack) {
+      const ok = tryCommitBodyToCollection(body);
+      if (!ok) {
+        arcadeBodies.push(body);
+        const field = els.arcadeField;
+        const fr = field.getBoundingClientRect();
+        body.x = Math.max(28, Math.min(fr.width - 28, e.clientX - fr.left + field.scrollLeft));
+        body.y = Math.max(28, Math.min(fr.height - 28, e.clientY - fr.top + field.scrollTop));
+        syncArcadeBodyDom(body);
+      }
+    } else if (pointInRect(e.clientX, e.clientY, fieldRect)) {
+      arcadeBodies.push(body);
+      const field = els.arcadeField;
+      const fr = field.getBoundingClientRect();
+      body.x = Math.max(28, Math.min(fr.width - 28, e.clientX - fr.left + field.scrollLeft));
+      body.y = Math.max(28, Math.min(fr.height - 28, e.clientY - fr.top + field.scrollTop));
+      syncArcadeBodyDom(body);
+    } else {
+      arcadeBodies.push(body);
+      syncArcadeBodyDom(body);
+    }
+  } else if (arcadeWeapon === "peel") {
+    arcadePeelBody(body);
+  }
+
+  arcadeBubbleDrag = null;
+}
+
+function arcadeOnBubblePointerDown(e, body) {
+  if (st.analyzerPhase !== 1) return;
+  if (body.peelBolt) return;
+  e.stopPropagation();
+  e.preventDefault();
+  arcadeBubbleDrag = {
+    body,
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    dragging: false,
+    clone: null,
+  };
+  try {
+    body.el.setPointerCapture(e.pointerId);
+  } catch (_) {}
+  body.el.addEventListener("pointermove", arcadeBubbleDragMove);
+  body.el.addEventListener("pointerup", arcadeBubbleDragEnd);
+  body.el.addEventListener("pointercancel", arcadeBubbleDragEnd);
+}
 function arcadePressToPlay() {
   return globalThis.matchMedia?.("(hover: none), (pointer: coarse)")?.matches ?? false;
 }
@@ -318,7 +596,7 @@ function clearArcadeFieldBubbles() {
 
 function syncArcadeBodyDom(b) {
   const n = b.peelBolt ? 1 : b.value;
-  const r = arcadeRadiusPx(n);
+  const r = effectiveArcadeRadius(b);
   const s = r * 2;
   b.el.style.width = `${s}px`;
   b.el.style.height = `${s}px`;
@@ -369,7 +647,35 @@ function playArcadeMergeBurst(el) {
 }
 
 function updateArcadeAmmoUi() {
-  if (els.arcadeAmmo) els.arcadeAmmo.textContent = `×${arcadeAmmoLeft}`;
+  const wrap = els.arcadeAmmo;
+  if (!wrap) return;
+  const fill = wrap.querySelector(".arcade-fuel__fill");
+  const cap = st.q?.product;
+  const ratio =
+    typeof cap === "number" && cap > 0 ? Math.max(0, Math.min(1, arcadeAmmoLeft / cap)) : 0;
+  const pct = ratio * 100;
+  if (fill) {
+    fill.style.width = `${pct}%`;
+  }
+  const bucket = pct <= 0 ? 0 : pct < 34 ? 1 : pct < 67 ? 2 : 3;
+  const texts = ["sin energía", "poca energía", "energía media", "bastante energía"];
+  wrap.setAttribute("aria-valuenow", String(bucket));
+  wrap.setAttribute("aria-valuemax", "3");
+  wrap.setAttribute("aria-valuetext", texts[bucket]);
+  wrap.classList.toggle("arcade-fuel--empty", pct <= 0);
+}
+
+/** Cada −1 aplicado a una burbuja > 1 recupera un disparo de uno (hasta el tope del nivel). */
+function grantArcadeAmmoForPeel() {
+  const cap = st.q?.product;
+  if (typeof cap === "number" && cap > 0) {
+    arcadeAmmoLeft = Math.min(cap, arcadeAmmoLeft + 1);
+  } else {
+    arcadeAmmoLeft += 1;
+  }
+  st.arcadeAmmoLeft = arcadeAmmoLeft;
+  updateArcadeAmmoUi();
+  setArcadeWeapon(arcadeWeapon);
 }
 
 /** Punta del cañón (alineado con CSS: alto 42px, bottom 10px, centrado). */
@@ -440,11 +746,13 @@ function setArcadeWeapon(mode) {
   }
   const { first, second } = phase1LabelFactors();
   const hints = {
-    shoot: `Dispará: escritorio = puntería y clic · móvil/emulador = apretá y soltá rápido (×${arcadeAmmoLeft}).`,
-    peel: "−1 cañón: apuntá y dispará; tocá burbuja o impactá una > 1.",
-    group: `Guardá: tocá un ${first} o un ${second}.`,
+    shoot:
+      "Dispará +1 hacia el campo. Arrastrá burbujas a la canasta (solo tamaños " +
+      `${first} o ${second}; el primero fija el tamaño).`,
+    peel:
+      "−1: dispará contra una burbuja > 1 o tocá sin arrastrar para pelar y desprender un 1. Podés devolver fichas de la canasta al campo arrastrando.",
   };
-  els.analyzerCollectHint.textContent = hints[mode];
+  els.analyzerCollectHint.textContent = mode === "peel" ? hints.peel : hints.shoot;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
 }
 
@@ -461,7 +769,7 @@ function bindArcadeUiOnce() {
   els.arcadeWeaponBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const w = btn.getAttribute("data-weapon");
-      if (w === "shoot" || w === "peel" || w === "group") setArcadeWeapon(w);
+      if (w === "shoot" || w === "peel") setArcadeWeapon(/** @type {"shoot" | "peel"} */ (w));
     });
   });
 }
@@ -473,15 +781,33 @@ function arcadeRemoveBolt(bolt) {
   bolt.el.remove();
 }
 
-/** @returns {boolean} true si se restó 1 y salió una unidad */
+/** Impacto del proyectil −1: solo baja el número en la misma burbuja (no se desprende un 1). */
+function arcadePeelBubbleHitByBolt(b) {
+  if (b.peelBolt || b.value <= 1) return;
+  b.value -= 1;
+  b.el.dataset.value = String(b.value);
+  b.el.textContent = String(b.value);
+  b.el.classList.remove("arcade-bubble--peel-source");
+  void b.el.offsetWidth;
+  b.el.classList.add("arcade-bubble--peel-source");
+  window.setTimeout(() => b.el.classList.remove("arcade-bubble--peel-source"), 380);
+  syncArcadeBodyDom(b);
+  grantArcadeAmmoForPeel();
+}
+
+/** @returns {boolean} true si se restó 1 y salió una unidad (solo modo tocar burbuja con −1). */
 function arcadePeelBubbleInPlace(b) {
   if (b.peelBolt || b.value <= 1) return false;
   b.value -= 1;
   b.el.dataset.value = String(b.value);
   b.el.textContent = String(b.value);
-  const r = arcadeRadiusPx(b.value);
+  const rP = arcadeRadiusPx(b.value);
+  const rSpawn = arcadeRadiusPx(1);
+  // Separar centros al menos rP + rSpawn + hueco: si quedan pegadas, el mismo frame las fusiona otra vez (2→1+1→2).
+  const peelSpawnGapPx = 10;
+  const separationX = rP + peelSpawnGapPx + rSpawn;
   arcadeCreateBody(
-    b.x + r + 12,
+    b.x + separationX,
     b.y + (Math.random() - 0.5) * 8,
     1,
     (Math.random() - 0.5) * 60,
@@ -492,6 +818,7 @@ function arcadePeelBubbleInPlace(b) {
   b.el.classList.add("arcade-bubble--peel-source");
   window.setTimeout(() => b.el.classList.remove("arcade-bubble--peel-source"), 380);
   syncArcadeBodyDom(b);
+  grantArcadeAmmoForPeel();
   return true;
 }
 
@@ -522,7 +849,7 @@ function arcadeStep(dt) {
     maxSpeed: 500,
     syncDom: syncArcadeBodyDom,
     removeBolt: arcadeRemoveBolt,
-    peelBubbleInPlace: arcadePeelBubbleInPlace,
+    peelBubbleHitByBolt: arcadePeelBubbleHitByBolt,
     mergeBodiesKeepFirst,
   });
 }
@@ -564,58 +891,12 @@ function arcadeCreateBody(x, y, value, vx, vy, peelBolt = false) {
   return body;
 }
 
-function arcadeOnBubblePointerDown(e, body) {
-  if (st.analyzerPhase !== 1) return;
-  e.stopPropagation();
-  if (arcadeWeapon === "peel") {
-    e.preventDefault();
-    arcadePeelBody(body);
-  } else if (arcadeWeapon === "group") {
-    e.preventDefault();
-    arcadeTryGroupBody(body);
-  }
-}
-
 function arcadePeelBody(b) {
   if (!arcadePeelBubbleInPlace(b)) shakeElement(b.el);
 }
 
-function arcadeTryGroupBody(body) {
-  const v = body.value;
-  const { a, b: bf } = st.q;
-  if (st.analyzerLockedSize == null) {
-    if (v !== a && v !== bf) {
-      shakeElement(body.el);
-      showPhase1CollectError(`${a} o ${bf}`);
-      return;
-    }
-    st.analyzerLockedSize = v;
-    st.analyzerGroupsTarget = v === a ? bf : a;
-  } else if (v !== st.analyzerLockedSize) {
-    shakeElement(body.el);
-    showPhase1CollectError(`Solo ${st.analyzerLockedSize}.`);
-    return;
-  }
-  if (els.collectionZone.children.length >= st.analyzerGroupsTarget) {
-    shakeElement(body.el);
-    showPhase1CollectError("Completado.");
-    return;
-  }
-  const idx = arcadeBodies.indexOf(body);
-  if (idx >= 0) arcadeBodies.splice(idx, 1);
-  body.el.remove();
-  const chip = document.createElement("div");
-  chip.className = "arcade-group-chip";
-  chip.dataset.value = String(v);
-  chip.textContent = String(v);
-  chip.setAttribute("aria-label", `Grupo ${v}`);
-  els.collectionZone.appendChild(chip);
-  updateAnalyzerCollectFooter();
-}
-
 function arcadeFireToward(clientX, clientY) {
   if (st.analyzerPhase !== 1) return;
-  if (arcadeWeapon === "group") return;
   const field = els.arcadeField;
   const fr = field.getBoundingClientRect();
   const tx = clientX - fr.left + field.scrollLeft;
@@ -748,7 +1029,7 @@ function phase1LabelFactors() {
 
 function defaultAnalyzerPhase1Hint() {
   const { first, second } = phase1LabelFactors();
-  return `+1: ratón = apuntar y clic · móvil = mantener apunta, toque corto dispara · ▣ ${first}/${second}.`;
+  return `Arrastrá a la canasta solo burbujas de ${first} o ${second} (la primera fija el tamaño). +1 / −1 en la dock.`;
 }
 
 function clearAnalyzerCollectHintResetTimer() {
@@ -828,15 +1109,17 @@ function renderAnalyzer() {
 
 function updateAnalyzerCollectFooter() {
   const n = els.collectionZone.children.length;
-  const { a, b, product } = st.q;
+  const { a, b } = st.q;
   const lock = st.analyzerLockedSize;
   const need = st.analyzerGroupsTarget;
 
   if (lock == null) {
-    els.analyzerFooterLine.textContent = n ? `${n} en canasta · ▣ ${a} o ${b}` : `▣ un grupo de ${a} o ${b} · ×${product}`;
+    els.analyzerFooterLine.textContent = n
+      ? `${n} en canasta · solo tamaños ${a} o ${b}`
+      : `Canasta vacía · arrastrá grupos de ${a} o de ${b}`;
     els.btnAnalyzerNext.disabled = true;
   } else {
-    els.analyzerFooterLine.textContent = `${n} / ${need} · tamaño ${lock}`;
+    els.analyzerFooterLine.textContent = `${n} / ${need} grupos de ${lock}`;
     els.btnAnalyzerNext.disabled = n !== need;
   }
 }

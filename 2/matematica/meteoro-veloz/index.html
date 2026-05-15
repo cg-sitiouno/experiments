@@ -88,7 +88,7 @@
             <div
               id="arcade-field"
               class="arcade-field"
-              aria-label="Campo. Ratón: apuntá y clic. Pantalla: mantené para apuntar, toque corto para disparar."
+              aria-label="Zona de juego. +1/−1 en la dock. Arrastrá burbujas a la canasta o devolvélas al campo. Ratón: apuntá y clic para disparar."
             >
               <svg id="arcade-aim-svg" class="arcade-aim-svg" aria-hidden="true">
                 <line
@@ -102,7 +102,7 @@
               </svg>
               <div id="arcade-muzzle" class="arcade-muzzle" aria-hidden="true"></div>
             </div>
-            <aside class="arcade-side" aria-label="Grupos">
+            <aside class="arcade-side" aria-label="Canasta: soltá burbujas aquí o arrástralas de vuelta al campo">
               <div id="collection-zone" class="arcade-group-rack"></div>
             </aside>
             <div class="arcade-dock">
@@ -110,12 +110,24 @@
                 <span class="arcade-cannon__body"></span>
                 <span class="arcade-cannon__glow"></span>
               </div>
-              <div class="arcade-weapons" role="group" aria-label="Armas del cañón">
+              <div class="arcade-weapons" role="group" aria-label="Modo del cañón">
                 <button type="button" class="arcade-weapon arcade-weapon--active" data-weapon="shoot" aria-pressed="true" title="Disparar un 1">+1</button>
-                <button type="button" class="arcade-weapon" data-weapon="peel" aria-pressed="false" title="Sacar 1 de una burbuja">−1</button>
-                <button type="button" class="arcade-weapon" data-weapon="group" aria-pressed="false" title="Guardar grupo">▣</button>
+                <button type="button" class="arcade-weapon" data-weapon="peel" aria-pressed="false" title="Restar 1 (disparo o toque corto en burbuja)">−1</button>
               </div>
-              <span id="arcade-ammo" class="arcade-ammo" aria-live="polite"></span>
+              <div
+                id="arcade-ammo"
+                class="arcade-fuel"
+                role="progressbar"
+                aria-label="Energía aproximada del cañón"
+                aria-valuemin="0"
+                aria-valuemax="3"
+                aria-valuenow="3"
+                aria-valuetext="bastante energía"
+              >
+                <div class="arcade-fuel__track">
+                  <div class="arcade-fuel__fill" aria-hidden="true"></div>
+                </div>
+              </div>
             </div>
           </div>
           <p id="analyzer-collect-hint" class="analyzer__collect-hint analyzer__collect-hint--mini" aria-live="polite"></p>

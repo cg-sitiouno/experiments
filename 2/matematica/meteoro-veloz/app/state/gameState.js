@@ -22,7 +22,7 @@ export function createInitialState() {
     analyzerGroupSize: 0,
     analyzerLockedSize: /** @type {number | null} */ (null),
     analyzerGroupsTarget: 0,
-    arcadeWeapon: /** @type {"shoot" | "peel" | "group"} */ ("shoot"),
+    arcadeWeapon: /** @type {"shoot" | "peel"} */ ("shoot"),
     arcadeAmmoLeft: 0,
     sumMergeModalOpen: false,
     pendingSumMerge: /** @type {{ elA: HTMLElement, elB: HTMLElement, expected: number } | null} */ (
