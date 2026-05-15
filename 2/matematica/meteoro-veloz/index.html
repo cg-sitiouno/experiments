@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meteoro Veloz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+
+    <!-- INICIO -->
+    <section id="screen-start" class="screen screen--start" aria-label="Inicio">
+      <a href="../index.html" class="link-hub">← Matemática</a>
+      <div class="meteor-hero" aria-hidden="true">🌑</div>
+      <h1 class="start-title">Meteoro Veloz</h1>
+      <p class="start-desc">Responde la multiplicación antes de que el meteorito impacte.</p>
+      <div class="level-grid" role="group" aria-label="Elige un nivel">
+        <button type="button" class="btn-level" data-level="1">
+          <span class="btn-level__name">Nivel 1</span>
+          <span class="btn-level__hint">Tablas 2–5 · 10 segundos</span>
+        </button>
+        <button type="button" class="btn-level" data-level="2">
+          <span class="btn-level__name">Nivel 2</span>
+          <span class="btn-level__hint">Tablas 6–9 · 7 segundos</span>
+        </button>
+        <button type="button" class="btn-level" data-level="3">
+          <span class="btn-level__name">Nivel 3</span>
+          <span class="btn-level__hint">Todas las tablas · 5 segundos</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- JUEGO -->
+    <section id="screen-game" class="screen screen--game" hidden aria-label="Partida">
+
+      <div class="hud" role="status" aria-live="polite">
+        <span id="hud-level">Nivel 1</span>
+        <span id="hud-round">1 / 10</span>
+        <span id="hud-points">0 pts</span>
+      </div>
+
+      <div id="timer-wrap" class="timer-wrap" aria-hidden="true">
+        <div id="timer-bar" class="timer-bar"></div>
+      </div>
+
+      <div class="question-wrap" aria-live="polite">
+        <p id="question"></p>
+      </div>
+
+      <div class="answers" role="group" aria-label="Opciones de respuesta">
+        <button type="button" class="answer-btn"></button>
+        <button type="button" class="answer-btn"></button>
+        <button type="button" class="answer-btn"></button>
+        <button type="button" class="answer-btn"></button>
+      </div>
+
+      <div id="feedback-bar" class="feedback-bar" hidden role="alert">
+        <span id="feedback-text"></span>
+      </div>
+
+      <button type="button" class="btn-analyzer" id="btn-open-analyzer" hidden>
+        🔍 No recuerdo — analizar
+      </button>
+
+      <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
+
+      <!-- ── Panel analizador (overlay sobre la pantalla de juego) ── -->
+      <div id="analyzer" class="analyzer" hidden aria-label="Modo analizador">
+
+        <div class="analyzer__header analyzer__header--arcade">
+          <div class="analyzer__header-main">
+            <p id="analyzer-step" class="analyzer__step analyzer__step--mini" aria-live="polite">1 / 2</p>
+            <p id="analyzer-title" class="analyzer__title-hero"></p>
+          </div>
+          <div class="analyzer__controls">
+            <button type="button" id="btn-flip">↔</button>
+            <button type="button" id="btn-reset-analyzer">↺</button>
+            <button type="button" id="btn-close-analyzer">✕</button>
+          </div>
+        </div>
+        <p id="analyzer-label" class="analyzer__label analyzer__label--hidden" hidden></p>
+
+        <div id="analyzer-collect-wrap" class="analyzer-arcade-wrap">
+          <div id="arcade-stage" class="arcade-stage">
+            <div
+              id="arcade-field"
+              class="arcade-field"
+              aria-label="Campo. Ratón: apuntá y clic. Pantalla: mantené para apuntar, toque corto para disparar."
+            >
+              <svg id="arcade-aim-svg" class="arcade-aim-svg" aria-hidden="true">
+                <line
+                  id="arcade-aim-line"
+                  class="arcade-aim-line"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="0"
+                />
+              </svg>
+              <div id="arcade-muzzle" class="arcade-muzzle" aria-hidden="true"></div>
+            </div>
+            <aside class="arcade-side" aria-label="Grupos">
+              <div id="collection-zone" class="arcade-group-rack"></div>
+            </aside>
+            <div class="arcade-dock">
+              <div class="arcade-cannon" aria-hidden="true">
+                <span class="arcade-cannon__body"></span>
+                <span class="arcade-cannon__glow"></span>
+              </div>
+              <div class="arcade-weapons" role="group" aria-label="Armas del cañón">
+                <button type="button" class="arcade-weapon arcade-weapon--active" data-weapon="shoot" aria-pressed="true" title="Disparar un 1">+1</button>
+                <button type="button" class="arcade-weapon" data-weapon="peel" aria-pressed="false" title="Sacar 1 de una burbuja">−1</button>
+                <button type="button" class="arcade-weapon" data-weapon="group" aria-pressed="false" title="Guardar grupo">▣</button>
+              </div>
+              <span id="arcade-ammo" class="arcade-ammo" aria-live="polite"></span>
+            </div>
+          </div>
+          <p id="analyzer-collect-hint" class="analyzer__collect-hint analyzer__collect-hint--mini" aria-live="polite"></p>
+          <button type="button" class="btn-analyzer-next" id="btn-analyzer-next" disabled>
+            Siguiente →
+          </button>
+        </div>
+
+        <div id="analyzer-sum-wrap" class="analyzer-sum-wrap" hidden>
+          <p id="analyzer-sum-hint" class="analyzer__sum-hint"></p>
+          <div
+            id="sum-workspace"
+            class="sum-workspace"
+            aria-label="Mesa de suma. Arrastrá una burbuja sobre otra; luego escribí la suma para fusionar."
+          ></div>
+          <p id="sum-merge-hint" class="sum-merge-hint" aria-live="polite"></p>
+        </div>
+
+        <div class="analyzer__footer">
+          <div class="count-row" id="analyzer-footer-line"></div>
+        </div>
+
+        <div id="sum-merge-modal" class="sum-merge-modal" hidden>
+          <div class="sum-merge-modal__backdrop" data-close-sum-merge tabindex="-1" aria-hidden="true"></div>
+          <div
+            class="sum-merge-modal__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sum-merge-prompt"
+          >
+            <p id="sum-merge-prompt" class="sum-merge-prompt"></p>
+            <p class="sum-merge-modal__sub">Escribí el resultado para fusionar (como en Bubble Math Lab).</p>
+            <form id="form-sum-merge" class="sum-merge-form" novalidate>
+              <label class="sum-merge-label" for="sum-merge-answer">¿Cuánto es?</label>
+              <input
+                type="number"
+                id="sum-merge-answer"
+                class="sum-merge-input"
+                inputmode="numeric"
+                autocomplete="off"
+                enterkeyhint="done"
+                aria-describedby="sum-merge-feedback"
+              />
+              <p id="sum-merge-feedback" class="sum-merge-feedback" role="alert" hidden></p>
+              <div class="sum-merge-actions">
+                <button type="submit" class="sum-merge-submit">Fusionar</button>
+                <button type="button" class="sum-merge-cancel" id="btn-sum-merge-cancel">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RESULTADO -->
+    <section id="screen-result" class="screen screen--result" hidden aria-label="Resultado">
+      <h2 class="result-title">¡Misión completada!</h2>
+      <div class="result-stars" id="result-stars"></div>
+      <div class="result-points" id="result-points"></div>
+      <p class="result-msg" id="result-msg"></p>
+      <div class="result-actions">
+        <button type="button" class="btn-primary" id="btn-play-again">Jugar de nuevo</button>
+        <a class="btn-ghost" href="../index.html">← Matemática</a>
+      </div>
+    </section>
+
+    <script type="module" src="app/main.js"></script>
+  </body>
+</html>

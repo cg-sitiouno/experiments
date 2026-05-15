@@ -293,6 +293,22 @@ body {
     0 0 56px rgba(34, 197, 94, 0.22);
 }
 
+/* Juego: Meteoro Veloz — acento naranja */
+.game-card--meteor {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.45),
+    0 0 40px rgba(249, 115, 22, 0.13),
+    0 0 0 1px rgba(0, 0, 0, 0.2) inset;
+}
+
+.game-card--meteor:hover {
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 56px rgba(249, 115, 22, 0.28),
+    0 0 72px rgba(251, 146, 60, 0.18);
+}
+
 /* Tarjeta bloqueada / próximamente */
 .game-card--locked {
   opacity: 0.42;
