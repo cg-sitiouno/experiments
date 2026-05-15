@@ -242,6 +242,24 @@
         </div>
       </div>
 
+      <!-- Fin de reto (modo memoria): felicitación o aliento antes de seguir -->
+      <div id="memory-round-modal" class="memory-round-modal" hidden>
+        <div class="memory-round-modal__backdrop" aria-hidden="true"></div>
+        <div
+          id="memory-round-card"
+          class="memory-round-modal__card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="memory-round-title"
+        >
+          <h2 id="memory-round-title" class="memory-round-modal__title"></h2>
+          <p id="memory-round-message" class="memory-round-modal__message"></p>
+          <button type="button" class="btn-primary btn-memory-round-next" id="btn-memory-round-next">
+            Siguiente reto
+          </button>
+        </div>
+      </div>
+
     </section>
 
     <!-- RESULTADO -->

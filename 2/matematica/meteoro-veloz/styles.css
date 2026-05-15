@@ -407,6 +407,59 @@ body {
   border: 1px dashed rgba(251, 191, 36, 0.45);
   color: #fde68a;
 }
+
+/* Fin de reto — modo memoria */
+.memory-round-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.memory-round-modal[hidden] {
+  display: none !important;
+}
+.memory-round-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+.memory-round-modal__card {
+  position: relative;
+  z-index: 1;
+  max-width: 22rem;
+  width: 100%;
+  padding: 1.35rem 1.4rem;
+  border-radius: 16px;
+  background: linear-gradient(165deg, #0f172a, #1e1b4b);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.memory-round-modal__card--success {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+.memory-round-modal__card--try {
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.memory-round-modal__title {
+  margin: 0 0 0.6rem;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #e0f2fe;
+}
+.memory-round-modal__message {
+  margin: 0 0 1.15rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+.btn-memory-round-next {
+  width: 100%;
+}
 .btn-memory-table-close {
   width: 100%;
   padding: 0.6rem;

@@ -93,6 +93,11 @@ function initEls() {
     memoryTableSub:     document.getElementById("memory-table-sub"),
     memoryTableBody:    document.getElementById("memory-table-body"),
     btnCloseMemoryTable: document.getElementById("btn-close-memory-table"),
+    memoryRoundModal:   document.getElementById("memory-round-modal"),
+    memoryRoundCard:    document.getElementById("memory-round-card"),
+    memoryRoundTitle:   document.getElementById("memory-round-title"),
+    memoryRoundMessage: document.getElementById("memory-round-message"),
+    btnMemoryRoundNext: document.getElementById("btn-memory-round-next"),
   };
 }
 
@@ -121,6 +126,7 @@ function goToModeSelectFromGame() {
   st.analyzerHelpMode = null;
   els.analyzer.hidden = true;
   closeMemoryTableModal();
+  closeMemoryRoundModal();
   st.pendingLevel = st.level;
   updateModeScreenCopy();
   showScreen("mode");
@@ -150,6 +156,7 @@ function nextRound() {
   st.q = makeQuestion(st.level);
 
   closeMemoryTableModal();
+  closeMemoryRoundModal();
 
   els.hudLevel.textContent  = `Nivel ${st.level}`;
   els.hudRound.textContent  = `${st.round} / ${CONFIG.ROUNDS}`;
@@ -258,6 +265,53 @@ function stopTimer() {
 
 // ── Respuestas ───────────────────────────────────────────────────────────────
 
+function closeMemoryRoundModal() {
+  if (!els.memoryRoundModal) return;
+  els.memoryRoundModal.hidden = true;
+}
+
+/** Modal al terminar un reto en modo memoria (manual → siguiente). */
+function showMemoryRoundOutcome(kind) {
+  if (
+    !els.memoryRoundModal ||
+    !els.memoryRoundCard ||
+    !els.memoryRoundTitle ||
+    !els.memoryRoundMessage ||
+    !els.btnMemoryRoundNext ||
+    !st.q ||
+    st.gameMode !== "memory"
+  )
+    return;
+  const { a, b, product } = st.q;
+  const lastRound = st.round >= CONFIG.ROUNDS;
+
+  els.feedbackBar.hidden = true;
+  els.memoryRoundModal.hidden = false;
+  els.memoryRoundCard.classList.remove(
+    "memory-round-modal__card--success",
+    "memory-round-modal__card--try"
+  );
+
+  if (kind === "success") {
+    els.memoryRoundCard.classList.add("memory-round-modal__card--success");
+    els.memoryRoundTitle.textContent = "¡Muy bien!";
+    els.memoryRoundMessage.textContent = `Acertaste: ${a} × ${b} = ${product}. Seguí así.`;
+  } else if (kind === "wrong") {
+    els.memoryRoundCard.classList.add("memory-round-modal__card--try");
+    els.memoryRoundTitle.textContent = "¡Seguí practicando!";
+    els.memoryRoundMessage.textContent =
+      `Esa no era la respuesta. La cuenta era ${a} × ${b} = ${product}. Dale otra oportunidad en el próximo reto.`;
+  } else {
+    els.memoryRoundCard.classList.add("memory-round-modal__card--try");
+    els.memoryRoundTitle.textContent = "¡Se acabó el tiempo!";
+    els.memoryRoundMessage.textContent =
+      `Era ${a} × ${b} = ${product}. No pasa nada: respirá y probá en el siguiente.`;
+  }
+
+  els.btnMemoryRoundNext.textContent = lastRound ? "Ver resultado" : "Siguiente reto";
+  window.setTimeout(() => els.btnMemoryRoundNext.focus(), 30);
+}
+
 function handleAnswer(idx) {
   if (st.gameMode !== "memory") return;
   if (st.answered) return;
@@ -271,22 +325,19 @@ function handleAnswer(idx) {
 
   if (correct) {
     st.points += CONFIG.POINTS_BASE;
-    showFeedback("✓ ¡Correcto!", true);
-  } else {
-    showFeedback(`✗  Era ${st.q.product}`, false);
+    els.hudPoints.textContent = `${st.points} pts`;
   }
 
   revealAnswers(idx, correct);
-  setTimeout(nextRound, 1400);
+  showMemoryRoundOutcome(correct ? "success" : "wrong");
 }
 
 function handleTimeout() {
   if (els.memoryTableModal) els.memoryTableModal.hidden = true;
   st.analyzerOpen = false;
   st.answered = true;
-  showFeedback(`⏱  Tiempo. Era ${st.q.product}`, false);
   revealAnswers(-1, false);
-  setTimeout(nextRound, 1400);
+  showMemoryRoundOutcome("timeout");
 }
 
 function revealAnswers(chosenIdx, correct) {
@@ -1881,6 +1932,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (els.memoryTableModal) {
     els.memoryTableModal.querySelectorAll("[data-close-memory-table]").forEach((n) => {
       n.addEventListener("click", closeMemoryTableModal);
+    });
+  }
+  if (els.btnMemoryRoundNext) {
+    els.btnMemoryRoundNext.addEventListener("click", () => {
+      closeMemoryRoundModal();
+      nextRound();
     });
   }
   showScreen("start");
