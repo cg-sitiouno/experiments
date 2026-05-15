@@ -24,10 +24,14 @@ let els;
 /** Limpia mensaje de error temporal del paso 1 (hint). */
 let analyzerCollectHintResetTimer = 0;
 
+/** Tras completar el producto en modo arcade (fase 2), evita doble avance de ronda. */
+let arcadeRoundWinTimer = 0;
+
 function initEls() {
   els = {
     screens: {
       start:  document.getElementById("screen-start"),
+      mode:   document.getElementById("screen-mode"),
       game:   document.getElementById("screen-game"),
       result: document.getElementById("screen-result"),
     },
@@ -41,6 +45,7 @@ function initEls() {
     answerBtns:         document.querySelectorAll(".answer-btn"),
     feedbackBar:        document.getElementById("feedback-bar"),
     feedbackTxt:        document.getElementById("feedback-text"),
+    answersWrap:        document.querySelector(".answers"),
     btnAnalyzer:        document.getElementById("btn-open-analyzer"),
     analyzer:           document.getElementById("analyzer"),
     analyzerStep:       document.getElementById("analyzer-step"),
@@ -76,6 +81,18 @@ function initEls() {
     resultMsg:          document.getElementById("result-msg"),
     btnPlayAgain:       document.getElementById("btn-play-again"),
     btnMenu:            document.getElementById("btn-menu"),
+    modeScreenLead:     document.getElementById("mode-screen-lead"),
+    btnModeMemory:      document.getElementById("btn-mode-memory"),
+    btnModeArcade:      document.getElementById("btn-mode-arcade"),
+    btnModeBack:        document.getElementById("btn-mode-back"),
+    analyzerMemoryWrap: document.getElementById("analyzer-memory-wrap"),
+    analyzerMemoryQuestion: document.getElementById("analyzer-memory-question"),
+    btnMemoryTableHelp: document.getElementById("btn-memory-table-help"),
+    memoryTableModal:   document.getElementById("memory-table-modal"),
+    memoryTableHeading: document.getElementById("memory-table-heading"),
+    memoryTableSub:     document.getElementById("memory-table-sub"),
+    memoryTableBody:    document.getElementById("memory-table-body"),
+    btnCloseMemoryTable: document.getElementById("btn-close-memory-table"),
   };
 }
 
@@ -85,9 +102,34 @@ function showScreen(name) {
 
 // ── Flujo de juego ───────────────────────────────────────────────────────────
 
-function startGame(level) {
-  st.level  = level;
-  st.round  = 0;
+function updateModeScreenCopy() {
+  const lvl = st.pendingLevel ?? st.level ?? 1;
+  if (els.modeScreenLead) els.modeScreenLead.textContent = `Nivel ${lvl} — elegí cómo querés jugar`;
+}
+
+/** Desde la partida: mismo nivel, otra vez selector de modo. */
+function goToModeSelectFromGame() {
+  if (arcadeRoundWinTimer) {
+    clearTimeout(arcadeRoundWinTimer);
+    arcadeRoundWinTimer = 0;
+  }
+  stopTimer();
+  stopArcadePhysics();
+  resetArcadePointerState();
+  closeSumMergeModal();
+  st.analyzerOpen = false;
+  st.analyzerHelpMode = null;
+  els.analyzer.hidden = true;
+  closeMemoryTableModal();
+  st.pendingLevel = st.level;
+  updateModeScreenCopy();
+  showScreen("mode");
+}
+
+function startGame(level, gameMode) {
+  st.level = level;
+  st.gameMode = gameMode;
+  st.round = 0;
   st.points = 0;
   showScreen("game");
   nextRound();
@@ -97,10 +139,17 @@ function nextRound() {
   st.round++;
   if (st.round > CONFIG.ROUNDS) { showResult(); return; }
 
-  st.answered        = false;
-  st.analyzerOpen    = false;
+  st.answered = false;
+  st.analyzerOpen = false;
   st.analyzerFlipped = false;
+  st.analyzerHelpMode = null;
+  if (arcadeRoundWinTimer) {
+    clearTimeout(arcadeRoundWinTimer);
+    arcadeRoundWinTimer = 0;
+  }
   st.q = makeQuestion(st.level);
+
+  closeMemoryTableModal();
 
   els.hudLevel.textContent  = `Nivel ${st.level}`;
   els.hudRound.textContent  = `${st.round} / ${CONFIG.ROUNDS}`;
@@ -116,11 +165,32 @@ function nextRound() {
   els.feedbackBar.hidden = true;
   els.analyzer.hidden    = true;
 
-  const canAnalyze = st.q.product <= CONFIG.MAX_ANALYZER_PRODUCT;
-  els.btnAnalyzer.hidden   = !canAnalyze;
-  els.btnAnalyzer.disabled = false;
+  const isMemory = st.gameMode === "memory";
+  const isArcade = st.gameMode === "arcade";
 
-  startTimer(CONFIG.LEVELS[st.level].timeMs);
+  if (isMemory) {
+    els.timerWrap.hidden = false;
+    els.timerWrap.setAttribute("aria-hidden", "false");
+    if (els.answersWrap) els.answersWrap.hidden = false;
+
+    const canAnalyze = st.q.product <= CONFIG.MAX_ANALYZER_PRODUCT;
+    els.btnAnalyzer.hidden   = !canAnalyze;
+    els.btnAnalyzer.disabled = false;
+
+    startTimer(CONFIG.LEVELS[st.level].timeMs);
+  } else if (isArcade) {
+    els.timerWrap.hidden = true;
+    els.timerWrap.setAttribute("aria-hidden", "true");
+    stopTimer();
+    if (els.answersWrap) els.answersWrap.hidden = true;
+    els.btnAnalyzer.hidden = true;
+
+    st.analyzerOpen = true;
+    st.analyzerHelpMode = "arcade";
+    st.analyzerFlipped = false;
+    renderAnalyzer();
+    els.analyzer.hidden = false;
+  }
 }
 
 // ── Timer (pausable) ─────────────────────────────────────────────────────────
@@ -189,9 +259,12 @@ function stopTimer() {
 // ── Respuestas ───────────────────────────────────────────────────────────────
 
 function handleAnswer(idx) {
+  if (st.gameMode !== "memory") return;
   if (st.answered) return;
   st.answered = true;
   stopTimer();
+  if (els.memoryTableModal) els.memoryTableModal.hidden = true;
+  st.analyzerOpen = false;
 
   const chosen  = st.q.options[idx];
   const correct = chosen === st.q.product;
@@ -208,6 +281,8 @@ function handleAnswer(idx) {
 }
 
 function handleTimeout() {
+  if (els.memoryTableModal) els.memoryTableModal.hidden = true;
+  st.analyzerOpen = false;
   st.answered = true;
   showFeedback(`⏱  Tiempo. Era ${st.q.product}`, false);
   revealAnswers(-1, false);
@@ -231,32 +306,58 @@ function showFeedback(msg, ok) {
 // ── Analizador (2 fases: agrupar unidades 1 → sumar con burbujas) ─────────────
 
 function openAnalyzer() {
+  if (st.gameMode !== "memory") return;
   if (st.answered || st.analyzerOpen) return;
   st.analyzerOpen = true;
   st.analyzerFlipped = false;
+  st.analyzerHelpMode = null;
   els.btnAnalyzer.disabled = true;
   pauseTimer();
-  renderAnalyzer();
-  els.analyzer.hidden = false;
+  els.analyzer.hidden = true;
+  openMemoryTableModal();
 }
 
 function closeAnalyzer() {
+  const wasArcadeOpen = st.gameMode === "arcade" && st.analyzerOpen && !st.answered;
+  const wasModalOnlyMemory =
+    st.gameMode === "memory" && st.analyzerOpen && els.analyzer.hidden;
+
   stopArcadePhysics();
   resetArcadePointerState();
   closeSumMergeModal();
+  closeMemoryTableModal();
   st.analyzerOpen = false;
+  st.analyzerHelpMode = null;
   els.analyzer.hidden = true;
-  if (!st.answered) resumeTimer();
+
+  if (wasArcadeOpen) {
+    if (arcadeRoundWinTimer) {
+      clearTimeout(arcadeRoundWinTimer);
+      arcadeRoundWinTimer = 0;
+    }
+    st.answered = true;
+    stopTimer();
+    showFeedback("Cerraste la ayuda. Ronda sin puntos.", false);
+    revealAnswers(-1, false);
+    setTimeout(nextRound, 1400);
+  } else if (st.gameMode === "memory" && !st.answered && !wasModalOnlyMemory) {
+    resumeTimer();
+  }
 }
 
 function flipAnalyzer() {
-  if (st.analyzerPhase !== 1) return;
+  if (st.analyzerHelpMode !== "arcade" || st.analyzerPhase !== 1) return;
   st.analyzerFlipped = !st.analyzerFlipped;
-  renderAnalyzer();
+  renderAnalyzerArcadeFull();
 }
 
 function resetAnalyzer() {
-  renderAnalyzer();
+  st.analyzerFlipped = false;
+  if (st.analyzerHelpMode === "arcade") {
+    renderAnalyzerArcadeFull();
+  } else if (st.analyzerHelpMode === "memory") {
+    showAnalyzerMemoryMode();
+  }
 }
 
 function closeSumMergeModal() {
@@ -1062,11 +1163,65 @@ function shakeElement(el) {
   el.classList.add("arcade-bubble--shake");
 }
 
-function renderAnalyzer() {
-  closeSumMergeModal();
-  clearAnalyzerCollectHintResetTimer();
-  els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
+function closeMemoryTableModal() {
+  if (!els.memoryTableModal) return;
+  els.memoryTableModal.hidden = true;
+  const modalOnlyMemoryHelp =
+    st.gameMode === "memory" &&
+    st.analyzerOpen &&
+    els.analyzer.hidden &&
+    !st.answered;
+  if (modalOnlyMemoryHelp) {
+    st.analyzerOpen = false;
+    st.analyzerHelpMode = null;
+    els.btnAnalyzer.disabled = false;
+    resumeTimer();
+  }
+}
 
+function fillMemoryTableContent() {
+  const { a, b } = st.q;
+  const { maxMult } = CONFIG.LEVELS[st.level];
+  const hi = Math.max(maxMult, b);
+  els.memoryTableHeading.textContent = `Tabla del ${a}`;
+  els.memoryTableSub.textContent =
+    `El resto de las filas está completo; en ${a} × ${b} el resultado aparece como ?.`;
+  els.memoryTableBody.innerHTML = "";
+  for (let k = 1; k <= hi; k++) {
+    const row = document.createElement("div");
+    row.className = "memory-table-row" + (k === b ? " memory-table-row--missing" : "");
+    row.textContent = k === b ? `${a} × ${k} = ?` : `${a} × ${k} = ${a * k}`;
+    els.memoryTableBody.appendChild(row);
+  }
+}
+
+function openMemoryTableModal() {
+  fillMemoryTableContent();
+  if (els.memoryTableModal) els.memoryTableModal.hidden = false;
+}
+
+function showAnalyzerMemoryMode() {
+  stopArcadePhysics();
+  arcadeBodies = [];
+  clearArcadeFieldBubbles();
+  resetArcadePointerState();
+
+  els.analyzerMemoryWrap.hidden = false;
+  els.analyzerCollectWrap.hidden = true;
+  els.analyzerSumWrap.hidden = true;
+
+  const { a, b } = st.q;
+  els.analyzerStep.textContent = "Memoria";
+  els.analyzerTitle.textContent = `${a} × ${b} = ?`;
+  if (els.analyzerMemoryQuestion) els.analyzerMemoryQuestion.textContent = `${a} × ${b} = ?`;
+  els.btnFlip.disabled = true;
+  els.analyzerFooterLine.textContent =
+    "Abrí la tabla si necesitás contexto. Cerrá con ✕ para volver al juego y elegir respuesta.";
+  els.btnAnalyzerNext.disabled = true;
+  els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
+}
+
+function renderAnalyzerArcadeFull() {
   const { a, b, product } = st.q;
 
   st.analyzerPhase = 1;
@@ -1080,6 +1235,10 @@ function renderAnalyzer() {
   clearArcadeFieldBubbles();
   resetArcadePointerState();
 
+  els.analyzerMemoryWrap.hidden = true;
+  els.analyzerCollectWrap.hidden = false;
+  els.analyzerSumWrap.hidden = true;
+
   els.analyzerStep.textContent = "1 / 2";
   els.analyzerTitle.textContent = `${a} × ${b} = ?`;
   if (els.analyzerLabel) {
@@ -1089,8 +1248,6 @@ function renderAnalyzer() {
 
   els.analyzerCollectHint.textContent = defaultAnalyzerPhase1Hint();
 
-  els.analyzerCollectWrap.hidden = false;
-  els.analyzerSumWrap.hidden = true;
   els.btnFlip.disabled = false;
   els.btnAnalyzerNext.disabled = true;
 
@@ -1105,6 +1262,20 @@ function renderAnalyzer() {
   startArcadePhysics();
 
   updateAnalyzerCollectFooter();
+}
+
+function renderAnalyzer() {
+  closeSumMergeModal();
+  clearAnalyzerCollectHintResetTimer();
+
+  if (st.analyzerHelpMode === "memory") {
+    showAnalyzerMemoryMode();
+    return;
+  }
+  if (st.analyzerHelpMode === "arcade") {
+    els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
+    renderAnalyzerArcadeFull();
+  }
 }
 
 function updateAnalyzerCollectFooter() {
@@ -1125,6 +1296,7 @@ function updateAnalyzerCollectFooter() {
 }
 
 function goAnalyzerSumPhase() {
+  if (st.analyzerHelpMode !== "arcade") return;
   if (st.analyzerPhase !== 1) return;
   const lock = st.analyzerLockedSize;
   const need = st.analyzerGroupsTarget;
@@ -1145,6 +1317,7 @@ function goAnalyzerSumPhase() {
 
   closeSumMergeModal();
   st.analyzerPhase = 2;
+  els.analyzerMemoryWrap.hidden = true;
   els.analyzerCollectWrap.hidden = true;
   els.analyzerSumWrap.hidden = false;
   els.btnFlip.disabled = true;
@@ -1181,6 +1354,38 @@ function goAnalyzerSumPhase() {
   updateSumPhaseFeedback();
 }
 
+function clearArcadeRoundWinTimer() {
+  if (arcadeRoundWinTimer) {
+    window.clearTimeout(arcadeRoundWinTimer);
+    arcadeRoundWinTimer = 0;
+  }
+}
+
+function scheduleArcadeRoundWin() {
+  if (st.gameMode !== "arcade" || st.answered) return;
+  clearArcadeRoundWinTimer();
+  arcadeRoundWinTimer = window.setTimeout(() => {
+    arcadeRoundWinTimer = 0;
+    if (st.answered || st.gameMode !== "arcade") return;
+    completeArcadeRoundSuccess();
+  }, 650);
+}
+
+function completeArcadeRoundSuccess() {
+  if (st.answered) return;
+  st.answered = true;
+  stopArcadePhysics();
+  clearArcadeRoundWinTimer();
+  closeSumMergeModal();
+  st.analyzerOpen = false;
+  st.analyzerHelpMode = null;
+  els.analyzer.hidden = true;
+  st.points += CONFIG.POINTS_BASE;
+  showFeedback("✓ ¡Armaste el producto!", true);
+  revealAnswers(-1, true);
+  setTimeout(nextRound, 1400);
+}
+
 function updateSumPhaseFeedback(message, isOk) {
   if (typeof message === "string") {
     els.sumMergeHint.textContent = message;
@@ -1193,8 +1398,11 @@ function updateSumPhaseFeedback(message, isOk) {
     const v = Number(nodes[0].dataset.value);
     if (v === st.q.product) {
       els.sumMergeHint.textContent =
-        `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Volvé al juego y elegí la respuesta.`;
+        st.gameMode === "arcade"
+          ? `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Siguiente ronda…`
+          : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Volvé al juego y elegí la respuesta.`;
       els.sumMergeHint.className = "sum-merge-hint sum-merge-hint--ok";
+      if (st.gameMode === "arcade") scheduleArcadeRoundWin();
     } else {
       els.sumMergeHint.textContent =
         v < st.q.product
@@ -1610,14 +1818,33 @@ function showResult() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initEls();
-  els.levelBtns.forEach(btn =>
-    btn.addEventListener("click", () => startGame(Number(btn.dataset.level)))
+  els.levelBtns.forEach((btn) =>
+    btn.addEventListener("click", () => {
+      st.pendingLevel = Number(btn.dataset.level);
+      updateModeScreenCopy();
+      showScreen("mode");
+    })
   );
+  if (els.btnModeMemory) {
+    els.btnModeMemory.addEventListener("click", () => {
+      const lvl = st.pendingLevel ?? st.level ?? 1;
+      startGame(lvl, "memory");
+    });
+  }
+  if (els.btnModeArcade) {
+    els.btnModeArcade.addEventListener("click", () => {
+      const lvl = st.pendingLevel ?? st.level ?? 1;
+      startGame(lvl, "arcade");
+    });
+  }
+  if (els.btnModeBack) els.btnModeBack.addEventListener("click", () => showScreen("start"));
   els.answerBtns.forEach((btn, i) =>
     btn.addEventListener("click", () => handleAnswer(i))
   );
-  els.btnPlayAgain.addEventListener("click",      () => startGame(st.level));
-  els.btnMenu.addEventListener("click",           () => showScreen("start"));
+  els.btnPlayAgain.addEventListener("click", () =>
+    startGame(st.level, st.gameMode ?? "memory")
+  );
+  els.btnMenu.addEventListener("click", goToModeSelectFromGame);
   els.btnAnalyzer.addEventListener("click", openAnalyzer);
   els.btnFlip.addEventListener("click", flipAnalyzer);
   els.btnResetAnalyzer.addEventListener("click", resetAnalyzer);
@@ -1649,5 +1876,12 @@ document.addEventListener("DOMContentLoaded", () => {
   els.sumMergeModal.querySelectorAll("[data-close-sum-merge]").forEach((n) => {
     n.addEventListener("click", closeSumMergeModal);
   });
+  if (els.btnMemoryTableHelp) els.btnMemoryTableHelp.addEventListener("click", openMemoryTableModal);
+  if (els.btnCloseMemoryTable) els.btnCloseMemoryTable.addEventListener("click", closeMemoryTableModal);
+  if (els.memoryTableModal) {
+    els.memoryTableModal.querySelectorAll("[data-close-memory-table]").forEach((n) => {
+      n.addEventListener("click", closeMemoryTableModal);
+    });
+  }
   showScreen("start");
 });

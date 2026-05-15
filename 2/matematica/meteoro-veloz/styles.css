@@ -235,6 +235,189 @@ body {
   flex: 1 1 0%;
   min-height: 0;
 }
+
+/* Elegir modo: memoria vs arcade */
+.analyzer-mode-pick {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+.analyzer-mode-pick__lead {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  line-height: 1.35;
+}
+.analyzer-mode-pick__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+.analyzer-mode-card {
+  text-align: left;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 2px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.65);
+  color: #f1f5f9;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.analyzer-mode-card:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.1);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.12);
+}
+.analyzer-mode-card__title {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 900;
+  margin-bottom: 0.45rem;
+  color: #7dd3fc;
+}
+.analyzer-mode-card__desc {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.analyzer-memory-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+}
+.analyzer-memory-inner {
+  max-width: 28rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.analyzer-memory-question {
+  margin: 0;
+  font-size: clamp(1.6rem, 6vw, 2.35rem);
+  font-weight: 900;
+  color: #f8fafc;
+  text-shadow: 0 0 24px rgba(56, 189, 248, 0.35);
+}
+.analyzer-memory-copy {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.btn-memory-table {
+  align-self: center;
+  padding: 0.65rem 1.2rem;
+  border-radius: 12px;
+  border: 2px solid rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.btn-memory-table:hover {
+  background: rgba(251, 191, 36, 0.22);
+}
+.btn-memory-back {
+  align-self: center;
+  padding: 0.35rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.memory-table-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.memory-table-modal[hidden] {
+  display: none !important;
+}
+.memory-table-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+.memory-table-modal__card {
+  position: relative;
+  z-index: 1;
+  max-width: 22rem;
+  width: 100%;
+  max-height: min(85vh, 520px);
+  overflow: auto;
+  padding: 1.25rem 1.35rem;
+  border-radius: 16px;
+  background: linear-gradient(165deg, #0f172a, #1e1b4b);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+.memory-table-heading {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #e0f2fe;
+}
+.memory-table-sub {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.memory-table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.memory-table-row {
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+.memory-table-row--missing {
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px dashed rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+}
+.btn-memory-table-close {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 10px;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
 .arcade-stage {
   display: grid;
   grid-template-columns: 1fr minmax(52px, 88px);

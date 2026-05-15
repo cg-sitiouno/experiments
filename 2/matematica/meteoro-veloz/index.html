@@ -16,7 +16,7 @@
       <a href="../index.html" class="link-hub">← Matemática</a>
       <div class="meteor-hero" aria-hidden="true">🌑</div>
       <h1 class="start-title">Meteoro Veloz</h1>
-      <p class="start-desc">Responde la multiplicación antes de que el meteorito impacte.</p>
+      <p class="start-desc">Elegí un nivel y después el modo: memoria (tiempo y opciones) o arcade (armar el producto con grupos).</p>
       <div class="level-grid" role="group" aria-label="Elige un nivel">
         <button type="button" class="btn-level" data-level="1">
           <span class="btn-level__name">Nivel 1</span>
@@ -31,6 +31,29 @@
           <span class="btn-level__hint">Todas las tablas · 5 segundos</span>
         </button>
       </div>
+    </section>
+
+    <!-- MODO (después del nivel) -->
+    <section id="screen-mode" class="screen screen--start" hidden aria-label="Elegir modo de juego">
+      <a href="../index.html" class="link-hub">← Matemática</a>
+      <div class="meteor-hero" aria-hidden="true">🌑</div>
+      <h1 class="start-title">Meteoro Veloz</h1>
+      <p class="start-desc" id="mode-screen-lead"></p>
+      <div class="analyzer-mode-pick__grid" role="group" aria-label="Modo de juego">
+        <button type="button" class="analyzer-mode-card" id="btn-mode-memory">
+          <span class="analyzer-mode-card__title">Modo memoria</span>
+          <span class="analyzer-mode-card__desc">
+            Aparece la cuenta con tiempo y cuatro respuestas. Si no recordás, pedí ayuda y mirá la tabla con el renglón de esta cuenta como ?.
+          </span>
+        </button>
+        <button type="button" class="analyzer-mode-card" id="btn-mode-arcade">
+          <span class="analyzer-mode-card__title">Modo arcade</span>
+          <span class="analyzer-mode-card__desc">
+            Sin botones de respuesta: resolvé la multiplicación armando grupos en la canasta y sumando burbujas hasta llegar al producto.
+          </span>
+        </button>
+      </div>
+      <button type="button" class="btn-ghost" id="btn-mode-back">← Otro nivel</button>
     </section>
 
     <!-- JUEGO -->
@@ -62,13 +85,13 @@
       </div>
 
       <button type="button" class="btn-analyzer" id="btn-open-analyzer" hidden>
-        🔍 No recuerdo — analizar
+        🔍 No recuerdo — ayuda
       </button>
 
       <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
 
       <!-- ── Panel analizador (overlay sobre la pantalla de juego) ── -->
-      <div id="analyzer" class="analyzer" hidden aria-label="Modo analizador">
+      <div id="analyzer" class="analyzer" hidden aria-label="Ayuda: tabla o grupos">
 
         <div class="analyzer__header analyzer__header--arcade">
           <div class="analyzer__header-main">
@@ -82,6 +105,18 @@
           </div>
         </div>
         <p id="analyzer-label" class="analyzer__label analyzer__label--hidden" hidden></p>
+
+        <div id="analyzer-memory-wrap" class="analyzer-memory-wrap" hidden>
+          <div class="analyzer-memory-inner">
+            <p id="analyzer-memory-question" class="analyzer-memory-question" aria-live="polite"></p>
+            <p class="analyzer-memory-copy">
+              Pensá el resultado y cerrá esta ventana para elegir tu respuesta en la partida.
+            </p>
+            <button type="button" class="btn-memory-table" id="btn-memory-table-help">
+              Ver tabla (ayuda)
+            </button>
+          </div>
+        </div>
 
         <div id="analyzer-collect-wrap" class="analyzer-arcade-wrap">
           <div id="arcade-stage" class="arcade-stage">
@@ -182,6 +217,29 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Modal de tabla (modo memoria): fuera de #analyzer para poder mostrarse con el panel oculto -->
+      <div id="memory-table-modal" class="memory-table-modal" hidden>
+        <div
+          class="memory-table-modal__backdrop"
+          data-close-memory-table
+          tabindex="-1"
+          aria-hidden="true"
+        ></div>
+        <div
+          class="memory-table-modal__card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="memory-table-heading"
+        >
+          <h2 id="memory-table-heading" class="memory-table-heading"></h2>
+          <p id="memory-table-sub" class="memory-table-sub"></p>
+          <div id="memory-table-body" class="memory-table-body"></div>
+          <button type="button" class="btn-memory-table-close" id="btn-close-memory-table">
+            Cerrar
+          </button>
+        </div>
       </div>
 
     </section>

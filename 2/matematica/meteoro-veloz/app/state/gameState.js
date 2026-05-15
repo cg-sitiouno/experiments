@@ -5,6 +5,10 @@
 export function createInitialState() {
   return {
     level: 1,
+    /** Entre pantalla inicio y modo (y al volver desde partida). */
+    pendingLevel: /** @type {number | null} */ (null),
+    /** Cómo se resuelve la partida: memoria (cuatro opciones + tiempo) o arcade (grupos). */
+    gameMode: /** @type {null | "memory" | "arcade"} */ (null),
     round: 0,
     points: 0,
     answered: false,
@@ -16,6 +20,8 @@ export function createInitialState() {
     timerLastStart: /** @type {number | null} */ (null),
     analyzerOpen: false,
     analyzerFlipped: false,
+    /** null = cerrado; memory = tabla mental; arcade = minijuego */
+    analyzerHelpMode: /** @type {null | "memory" | "arcade"} */ (null),
     /** 1 = unidades y grupos · 2 = sumar burbujas (fusión) */
     analyzerPhase: 1,
     analyzerNumGroups: 0,
