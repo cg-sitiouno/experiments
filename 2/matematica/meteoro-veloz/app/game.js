@@ -3,6 +3,8 @@ import {
   RESULT_MSGS,
   ARCADE_TAP_MAX_MS,
   ARCADE_TAP_MAX_MOVE_PX,
+  ARCADE_AIM_DEAD_ZONE_PX,
+  ARCADE_AIM_FREEZE_ZONE_PX,
   ARCADE_FRICTION,
   ARCADE_SHOT_SPEED,
   ARCADE_WALL_BOUNCE,
@@ -93,9 +95,9 @@ function initEls() {
     btnResetAnalyzer:   document.getElementById("btn-reset-analyzer"),
     btnCloseAnalyzer:   document.getElementById("btn-close-analyzer"),
     arcadeField:        document.getElementById("arcade-field"),
-    arcadeMuzzle:       document.getElementById("arcade-muzzle"),
+    arcadeCannon:       document.getElementById("arcade-cannon"),
+    arcadeCannonBall:   document.getElementById("arcade-cannon-ball"),
     arcadeAmmo:         document.getElementById("arcade-ammo"),
-    arcadeWeaponBtns:   document.querySelectorAll(".arcade-weapon"),
     arcadeAimSvg:       document.getElementById("arcade-aim-svg"),
     arcadeAimLine:      document.getElementById("arcade-aim-line"),
     collectionZone:     document.getElementById("collection-zone"),
@@ -627,6 +629,9 @@ let arcadeBubbleDrag = null;
 /** @type {{ chip: HTMLElement, pointerId: number, startX: number, startY: number, dragging: boolean, clone: HTMLElement | null } | null} */
 let rackChipDrag = null;
 
+/** Última puntería estable (fuera de la zona de congelación), coords del campo. */
+let arcadeStableAimEnd = /** @type {{ x: number, y: number } | null} */ (null);
+
 function pointInRect(clientX, clientY, rect) {
   return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
 }
@@ -914,7 +919,7 @@ function stopArcadePhysics() {
 
 function clearArcadeFieldBubbles() {
   if (!els.arcadeField) return;
-  const keep = new Set(["arcade-muzzle", "arcade-aim-svg"]);
+  const keep = new Set(["arcade-cannon", "arcade-aim-svg"]);
   for (const n of [...els.arcadeField.children]) {
     if (keep.has(n.id)) continue;
     n.remove();
@@ -1008,16 +1013,23 @@ function grantArcadeAmmoForPeel() {
   setArcadeWeapon(arcadeWeapon);
 }
 
-/** Punta del cañón (alineado con CSS: alto 42px, bottom 10px, centrado). */
+/** Centro de la bola del cañón (origen del disparo), en coords del campo. */
 function getArcadeMuzzleCenterInField() {
   const field = els.arcadeField;
+  const ball = els.arcadeCannonBall;
+  if (field && ball) {
+    const fr = field.getBoundingClientRect();
+    const br = ball.getBoundingClientRect();
+    return {
+      x: br.left + br.width / 2 - fr.left + field.scrollLeft,
+      y: br.top + br.height / 2 - fr.top + field.scrollTop,
+    };
+  }
+  if (!field) return { x: 0, y: 0 };
   const fr = field.getBoundingClientRect();
   const w = fr.width;
   const h = fr.height;
-  return {
-    x: w / 2 + field.scrollLeft,
-    y: h - 10 - 42 + field.scrollTop,
-  };
+  return { x: w / 2 + field.scrollLeft, y: h - 52 + field.scrollTop };
 }
 
 function clientToFieldXY(clientX, clientY) {
@@ -1027,6 +1039,42 @@ function clientToFieldXY(clientX, clientY) {
     x: clientX - fr.left + field.scrollLeft,
     y: clientY - fr.top + field.scrollTop,
   };
+}
+
+/**
+ * Si el puntero queda a menos de `minR` del cañón, la dirección se toma con distancia
+ * mínima en el mismo rayo (evita atan2 inestable). Sin dirección: apunta arriba en pantalla.
+ */
+function arcadeClampedAimPointInField(mx, my, tx, ty, minR = ARCADE_AIM_DEAD_ZONE_PX) {
+  const dx = tx - mx;
+  const dy = ty - my;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) {
+    return { x: mx, y: my - minR };
+  }
+  if (len >= minR) {
+    return { x: tx, y: ty };
+  }
+  const s = minR / len;
+  return { x: mx + dx * s, y: my + dy * s };
+}
+
+/**
+ * Fuera de `freezeR`: actualiza la mira estable. Dentro: reutiliza la última mira (no reacciona al ruido cerca del cañón).
+ */
+function arcadeResolvedAimInField(mx, my, tx, ty, freezeR = ARCADE_AIM_FREEZE_ZONE_PX) {
+  const dx0 = tx - mx;
+  const dy0 = ty - my;
+  const dist0 = Math.hypot(dx0, dy0);
+  if (dist0 < freezeR) {
+    if (arcadeStableAimEnd) {
+      return arcadeStableAimEnd;
+    }
+    return arcadeClampedAimPointInField(mx, my, mx, my - 1);
+  }
+  const p = arcadeClampedAimPointInField(mx, my, tx, ty);
+  arcadeStableAimEnd = { x: p.x, y: p.y };
+  return arcadeStableAimEnd;
 }
 
 function hideArcadeAimLine() {
@@ -1039,47 +1087,68 @@ function muzzleRotationDegrees(mx, my, tx, ty) {
   return (Math.atan2(dx, -dy) * 180) / Math.PI;
 }
 
+function setArcadeCannonRotationDeg(deg) {
+  if (els.arcadeCannon) els.arcadeCannon.style.setProperty("--ac-rot", `${deg}deg`);
+}
+
 function updateArcadeAimVisual(clientX, clientY) {
-  if (!els.arcadeField || !els.arcadeAimLine || !els.arcadeMuzzle || !els.arcadeAimSvg) return;
+  if (!els.arcadeField || !els.arcadeAimLine || !els.arcadeCannon || !els.arcadeAimSvg) return;
   const m = getArcadeMuzzleCenterInField();
   let p = clientToFieldXY(clientX, clientY);
   const fr = els.arcadeField.getBoundingClientRect();
   p.x = Math.max(0, Math.min(fr.width, p.x));
   p.y = Math.max(0, Math.min(fr.height, p.y));
+  const aim = arcadeResolvedAimInField(m.x, m.y, p.x, p.y);
   els.arcadeAimLine.setAttribute("x1", String(m.x));
   els.arcadeAimLine.setAttribute("y1", String(m.y));
-  els.arcadeAimLine.setAttribute("x2", String(p.x));
-  els.arcadeAimLine.setAttribute("y2", String(p.y));
+  els.arcadeAimLine.setAttribute("x2", String(aim.x));
+  els.arcadeAimLine.setAttribute("y2", String(aim.y));
   els.arcadeAimSvg.classList.add("arcade-aim-svg--visible");
-  els.arcadeMuzzle.style.transform = `rotate(${muzzleRotationDegrees(m.x, m.y, p.x, p.y)}deg)`;
+  setArcadeCannonRotationDeg(muzzleRotationDegrees(m.x, m.y, aim.x, aim.y));
 }
 
 function resetArcadePointerState() {
   arcadeTouchPointer = null;
   arcadeSuppressClickUntil = 0;
+  arcadeStableAimEnd = null;
   hideArcadeAimLine();
-  if (els.arcadeMuzzle) els.arcadeMuzzle.style.transform = "rotate(0deg)";
+  setArcadeCannonRotationDeg(0);
+}
+
+function syncArcadeCannonWithWeapon() {
+  if (!els.arcadeCannon) return;
+  const peel = arcadeWeapon === "peel";
+  els.arcadeCannon.classList.toggle("arcade-cannon--peel", peel);
+  els.arcadeCannon.classList.toggle("arcade-cannon--shoot", !peel);
+  if (els.arcadeCannonBall) {
+    els.arcadeCannonBall.textContent = peel ? "−1" : "+1";
+  }
+  els.arcadeCannon.setAttribute(
+    "aria-label",
+    peel ? "Cañón en −1. Tocá para usar +1." : "Cañón en +1. Tocá para usar −1.",
+  );
+  els.arcadeCannon.setAttribute("aria-pressed", peel ? "true" : "false");
+}
+
+function toggleArcadeWeapon() {
+  setArcadeWeapon(arcadeWeapon === "shoot" ? "peel" : "shoot");
 }
 
 function setArcadeWeapon(mode) {
   arcadeWeapon = mode;
   st.arcadeWeapon = mode;
-  els.arcadeWeaponBtns.forEach((btn) => {
-    const w = btn.getAttribute("data-weapon");
-    const on = w === mode;
-    btn.classList.toggle("arcade-weapon--active", on);
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-  });
+  syncArcadeCannonWithWeapon();
   if (mode !== "shoot" && mode !== "peel") {
+    arcadeStableAimEnd = null;
     hideArcadeAimLine();
-    if (els.arcadeMuzzle) els.arcadeMuzzle.style.transform = "rotate(0deg)";
+    setArcadeCannonRotationDeg(0);
   }
   const { first, second } = phase1LabelFactors();
   const hints = {
     shoot:
-      `+1: dispará unos. Pasá grupos de ${first} o ${second} al verde (el primero elige el tamaño).`,
+      `Tocá el cañón para −1. Dispará unos; pasá grupos de ${first} o ${second} al verde.`,
     peel:
-      "−1: sacá 1 de una burbuja grande. Si −1 choca con 1, aparece 0 (violeta). Del verde podés volver grupos al campo.",
+      "Tocá el cañón para +1. −1 saca 1 de una burbuja grande. Con 1 aparece 0 violeta. Del verde podés volver grupos.",
   };
   els.analyzerCollectHint.textContent = mode === "peel" ? hints.peel : hints.shoot;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
@@ -1095,12 +1164,14 @@ function bindArcadeUiOnce() {
   els.arcadeField.addEventListener("pointercancel", onArcadeFieldPointerCancel);
   els.arcadeField.addEventListener("pointerleave", onArcadeFieldPointerLeave);
   els.arcadeField.addEventListener("click", onArcadeFieldClick);
-  els.arcadeWeaponBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const w = btn.getAttribute("data-weapon");
-      if (w === "shoot" || w === "peel") setArcadeWeapon(/** @type {"shoot" | "peel"} */ (w));
+  if (els.arcadeCannon) {
+    els.arcadeCannon.addEventListener("pointerdown", (e) => e.stopPropagation());
+    els.arcadeCannon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (st.analyzerPhase !== 1) return;
+      toggleArcadeWeapon();
     });
-  });
+  }
 }
 bindArcadeUiOnce._done = false;
 
@@ -1270,8 +1341,9 @@ function arcadeFireToward(clientX, clientY) {
   const tx = clientX - fr.left + field.scrollLeft;
   const ty = clientY - fr.top + field.scrollTop;
   const m = getArcadeMuzzleCenterInField();
-  let dx = tx - m.x;
-  let dy = ty - m.y;
+  const aim = arcadeResolvedAimInField(m.x, m.y, tx, ty);
+  let dx = aim.x - m.x;
+  let dy = aim.y - m.y;
   const len = Math.hypot(dx, dy) || 1;
   dx /= len;
   dy /= len;
@@ -1301,8 +1373,9 @@ function arcadeFireToward(clientX, clientY) {
 function onArcadeFieldPointerDown(e) {
   if (st.analyzerPhase !== 1) return;
   if (arcadeWeapon !== "shoot" && arcadeWeapon !== "peel") return;
-  const el = /** @type {HTMLElement} */ (e.target);
-  if (el.closest(".arcade-bubble")) return;
+  const t = /** @type {HTMLElement} */ (e.target);
+  if (t.closest("#arcade-cannon")) return;
+  if (t.closest(".arcade-bubble")) return;
   const pressMode = arcadePressToPlay();
   const usePointerSession =
     e.pointerType === "touch" || e.pointerType === "pen" || (pressMode && e.pointerType === "mouse");
@@ -1329,11 +1402,12 @@ function onArcadeFieldPointerMove(e) {
   const pressMode = arcadePressToPlay();
 
   if (!pressMode && e.pointerType === "mouse" && e.buttons === 0) {
-    if (targ.closest(".arcade-bubble")) {
-      hideArcadeAimLine();
-      if (els.arcadeMuzzle) els.arcadeMuzzle.style.transform = "rotate(0deg)";
-      return;
-    }
+      if (targ.closest(".arcade-bubble")) {
+        hideArcadeAimLine();
+        arcadeStableAimEnd = null;
+        setArcadeCannonRotationDeg(0);
+        return;
+      }
     updateArcadeAimVisual(e.clientX, e.clientY);
     return;
   }
@@ -1376,7 +1450,8 @@ function onArcadeFieldPointerLeave(e) {
   if (arcadePressToPlay()) return;
   if (e.pointerType !== "mouse") return;
   hideArcadeAimLine();
-  if (els.arcadeMuzzle) els.arcadeMuzzle.style.transform = "rotate(0deg)";
+  arcadeStableAimEnd = null;
+  setArcadeCannonRotationDeg(0);
 }
 
 function onArcadeFieldClick(e) {
@@ -1386,6 +1461,7 @@ function onArcadeFieldClick(e) {
   if (performance.now() < arcadeSuppressClickUntil) return;
   if ("pointerType" in e && /** @type {PointerEvent} */ (e).pointerType !== "mouse") return;
   const t = /** @type {HTMLElement} */ (e.target);
+  if (t.closest("#arcade-cannon")) return;
   if (t.closest(".arcade-bubble")) return;
   arcadeFireToward(e.clientX, e.clientY);
 }
@@ -1481,8 +1557,9 @@ function showAnalyzerMemoryMode() {
   els.analyzerTitle.textContent = `${a} × ${b} = ?`;
   if (els.analyzerMemoryQuestion) els.analyzerMemoryQuestion.textContent = `${a} × ${b} = ?`;
   els.btnFlip.disabled = true;
+  if (els.btnFlip) els.btnFlip.hidden = true;
   els.analyzerFooterLine.textContent =
-    "Mirá la tabla si querés. Cerrá con ✕ y elegí abajo.";
+    "Mirá la tabla si querés. Usá Cerrar y elegí abajo.";
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
 }
 
@@ -1518,6 +1595,7 @@ function renderAnalyzerArcadeFull(/** @type {{ skipMissionIntro?: boolean }} */ 
   els.analyzerCollectHint.textContent = defaultAnalyzerPhase1Hint();
 
   els.btnFlip.disabled = false;
+  if (els.btnFlip) els.btnFlip.hidden = false;
 
   els.collectionZone.innerHTML = "";
   els.sumWorkspace.innerHTML = "";
@@ -1605,6 +1683,7 @@ function goAnalyzerSumPhase() {
   els.analyzerCollectWrap.hidden = true;
   els.analyzerSumWrap.hidden = false;
   els.btnFlip.disabled = true;
+  if (els.btnFlip) els.btnFlip.hidden = true;
 
   els.analyzerStep.textContent = "2 / 2 — Sumar";
   els.analyzerFooterLine.textContent =
