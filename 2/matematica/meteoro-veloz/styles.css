@@ -265,6 +265,17 @@ body {
     0 0 52px rgba(125, 211, 252, 0.22),
     0 2px 0 rgba(0, 0, 0, 0.4);
 }
+.analyzer__mission-line {
+  margin: 0.45rem 0 0;
+  font-size: clamp(0.92rem, 3.6vw, 1.12rem);
+  font-weight: 800;
+  line-height: 1.35;
+  color: #a5f3fc;
+  text-shadow: 0 0 18px rgba(56, 189, 248, 0.28);
+}
+.analyzer__mission-line[hidden] {
+  display: none !important;
+}
 .analyzer__label--hidden {
   position: absolute;
   width: 1px;
@@ -573,7 +584,7 @@ body {
   filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.65)) drop-shadow(0 0 14px rgba(125, 211, 252, 0.35));
 }
 
-/* Cañón: bola en la punta (+1 / −1); tocá para alternar */
+/* Cañón: bola en la punta (+1 / −1); toca para alternar */
 .arcade-cannon {
   --ac-rot: 0deg;
   position: absolute;
@@ -943,6 +954,19 @@ body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgba(251, 146, 60, 0.95);
+}
+.arcade-flow-modal__kicker--equation {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.15rem, 4.2vw, 1.55rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-align: center;
+  color: #f8fafc;
+  text-shadow: 0 0 28px rgba(56, 189, 248, 0.35);
+}
+.arcade-flow-modal__lead--mission {
+  text-align: center;
 }
 .arcade-flow-modal__title {
   margin: 0 0 0.65rem;

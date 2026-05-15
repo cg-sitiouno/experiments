@@ -16,7 +16,7 @@
       <a href="../index.html" class="link-hub">← Matemática</a>
       <div class="meteor-hero" aria-hidden="true">🌑</div>
       <h1 class="start-title">Meteoro Veloz</h1>
-      <p class="start-desc">Elegí nivel y modo: memoria (con tiempo) o arcade (armar la cuenta con grupos).</p>
+      <p class="start-desc">Elige nivel y modo: memoria o arcade.</p>
       <div class="level-grid" role="group" aria-label="Elige un nivel">
         <button type="button" class="btn-level" data-level="1">
           <span class="btn-level__name">Nivel 1</span>
@@ -43,13 +43,13 @@
         <button type="button" class="analyzer-mode-card" id="btn-mode-memory">
           <span class="analyzer-mode-card__title">Modo memoria</span>
           <span class="analyzer-mode-card__desc">
-            Cuenta con tiempo y cuatro respuestas. Si te trabás, abrí la tabla con la ayuda.
+            Cuenta con tiempo y cuatro respuestas. Si te trabas, abre la tabla con la ayuda.
           </span>
         </button>
         <button type="button" class="analyzer-mode-card" id="btn-mode-arcade">
           <span class="analyzer-mode-card__title">Modo arcade</span>
           <span class="analyzer-mode-card__desc">
-            Sin botones: armá grupos al verde y sumá hasta llegar al resultado.
+            Sin botones: construye grupos y suma hasta llegar al resultado.
           </span>
         </button>
       </div>
@@ -108,6 +108,7 @@
           <div class="analyzer__header-main analyzer__header-main--center">
             <p id="analyzer-step" class="analyzer__step analyzer__step--mini" aria-live="polite">1 / 2</p>
             <p id="analyzer-title" class="analyzer__title-hero"></p>
+            <p id="analyzer-mission-line" class="analyzer__mission-line" aria-live="polite" hidden></p>
           </div>
         </div>
         <p id="analyzer-label" class="analyzer__label analyzer__label--hidden" hidden></p>
@@ -129,7 +130,7 @@
             <div
               id="arcade-field"
               class="arcade-field"
-              aria-label="Campo de juego. Tocá el cañón para cambiar +1 o −1. Apuntá y dispará."
+              aria-label="Campo de juego. Toca el cañón para cambiar +1 o −1. Apuntá y dispará."
             >
               <svg id="arcade-aim-svg" class="arcade-aim-svg" aria-hidden="true">
                 <line
@@ -145,7 +146,7 @@
                 type="button"
                 id="arcade-cannon"
                 class="arcade-cannon arcade-cannon--shoot"
-                aria-label="Cañón en +1. Tocá para cambiar a −1."
+                aria-label="Cañón en +1. Toca para cambiar a −1."
                 aria-pressed="false"
               >
                 <span id="arcade-cannon-ball" class="arcade-cannon__ball" aria-hidden="true">+1</span>
@@ -225,11 +226,10 @@
             class="arcade-flow-modal__card"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="arcade-mission-title"
+            aria-labelledby="arcade-mission-kicker"
           >
-            <p class="arcade-flow-modal__kicker" id="arcade-mission-kicker"></p>
-            <h2 id="arcade-mission-title" class="arcade-flow-modal__title">Tu misión</h2>
-            <p id="arcade-mission-lead" class="arcade-flow-modal__lead"></p>
+            <p class="arcade-flow-modal__kicker arcade-flow-modal__kicker--equation" id="arcade-mission-kicker"></p>
+            <p id="arcade-mission-lead" class="arcade-flow-modal__lead arcade-flow-modal__lead--mission"></p>
             <p id="arcade-mission-detail" class="arcade-flow-modal__body"></p>
             <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-mission-ok">
               ¡A jugar!
@@ -276,7 +276,7 @@
             aria-labelledby="sum-merge-prompt"
           >
             <p id="sum-merge-prompt" class="sum-merge-prompt"></p>
-            <p class="sum-merge-modal__sub">Escribí cuánto da y tocá Fusionar.</p>
+            <p class="sum-merge-modal__sub">Escribí cuánto da y toca Fusionar.</p>
             <form id="form-sum-merge" class="sum-merge-form" novalidate>
               <label class="sum-merge-label" for="sum-merge-answer">¿Cuánto es?</label>
               <input

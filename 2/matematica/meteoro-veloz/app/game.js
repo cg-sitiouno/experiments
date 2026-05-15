@@ -51,12 +51,18 @@ function isArcadeTargetGroupValue(v) {
     if (v !== st.analyzerLockedSize) return false;
     targetSize = st.analyzerLockedSize;
   } else {
-    if (v !== a && v !== bf) return false;
-    targetSize = v;
+    if (v !== bf) return false;
+    targetSize = bf;
   }
   // Tamaño 1: evitar avisos repetidos (muchos unos en el campo en tablas ×1).
   if (targetSize < 2) return false;
   return true;
+}
+
+/** Formato fijo «a grupos de b», alineado con el enunciado a × b (sin conmutar). */
+function phase1MissionGroupsLabel(a, b) {
+  const g = a === 1 ? "grupo" : "grupos";
+  return `${a} ${g} de ${b}`;
 }
 
 function initEls() {
@@ -83,6 +89,7 @@ function initEls() {
     analyzer:           document.getElementById("analyzer"),
     analyzerStep:       document.getElementById("analyzer-step"),
     analyzerTitle:      document.getElementById("analyzer-title"),
+    analyzerMissionLine: document.getElementById("analyzer-mission-line"),
     analyzerLabel:      document.getElementById("analyzer-label"),
     analyzerCollectHint: document.getElementById("analyzer-collect-hint"),
     analyzerCollectWrap: document.getElementById("analyzer-collect-wrap"),
@@ -110,7 +117,6 @@ function initEls() {
     btnArcadeMissionCompleteNext: document.getElementById("btn-arcade-mission-complete-next"),
     arcadeMissionModal: document.getElementById("arcade-mission-modal"),
     arcadeMissionKicker: document.getElementById("arcade-mission-kicker"),
-    arcadeMissionTitle: document.getElementById("arcade-mission-title"),
     arcadeMissionLead: document.getElementById("arcade-mission-lead"),
     arcadeMissionDetail: document.getElementById("arcade-mission-detail"),
     btnArcadeMissionOk: document.getElementById("btn-arcade-mission-ok"),
@@ -179,13 +185,11 @@ function openArcadeMissionModal(onContinue) {
   if (!els.arcadeMissionModal || !st.q) return;
   const { a, b } = st.q;
   arcadeMissionContinue = onContinue;
-  if (els.arcadeMissionKicker) els.arcadeMissionKicker.textContent = `${a} × ${b}`;
-  if (els.arcadeMissionTitle) els.arcadeMissionTitle.textContent = "Tu misión";
-  if (els.arcadeMissionLead) els.arcadeMissionLead.textContent = `Construye ${a} grupos de ${b}.`;
+  if (els.arcadeMissionKicker) els.arcadeMissionKicker.textContent = `${a} × ${b} = ?`;
+  if (els.arcadeMissionLead) els.arcadeMissionLead.textContent = `Construye ${phase1MissionGroupsLabel(a, b)}.`;
   if (els.arcadeMissionDetail) {
     els.arcadeMissionDetail.textContent =
-      // simplificamos instrucciones para un formato más conciso
-      "Dispara 1 para sumar y -1 para disminuir";      
+      "Con el cañón: +1 suma unidades y −1 resta una de una burbuja grande.";
   }
   els.arcadeMissionModal.hidden = false;
   window.setTimeout(() => els.btnArcadeMissionOk?.focus(), 40);
@@ -655,19 +659,21 @@ function tryCommitBodyToCollection(body) {
   }
   if (body.value === 0) {
     shakeElement(body.el);
-    showPhase1CollectError("El cero no va al verde.");
+    showPhase1CollectError("El cero no va a la zona verde.");
     return false;
   }
   const v = body.value;
   const { a, b: bf } = st.q;
   if (st.analyzerLockedSize == null) {
-    if (v !== a && v !== bf) {
+    if (v !== bf) {
       shakeElement(body.el);
-      showPhase1CollectError(`Solo grupos de ${a} o ${bf}.`);
+      showPhase1CollectError(
+        `La misión es armar ${phase1MissionGroupsLabel(a, bf)}: pasa solo grupos de ${bf}.`,
+      );
       return false;
     }
-    st.analyzerLockedSize = v;
-    st.analyzerGroupsTarget = v === a ? bf : a;
+    st.analyzerLockedSize = bf;
+    st.analyzerGroupsTarget = a;
   } else if (v !== st.analyzerLockedSize) {
     shakeElement(body.el);
     showPhase1CollectError(`Solo grupos de ${st.analyzerLockedSize}.`);
@@ -1145,7 +1151,7 @@ function syncArcadeCannonWithWeapon() {
   }
   els.arcadeCannon.setAttribute(
     "aria-label",
-    peel ? "Cañón en −1. Tocá para usar +1." : "Cañón en +1. Tocá para usar −1.",
+    peel ? "Cañón en −1. Toca para usar +1." : "Cañón en +1. Toca para usar −1.",
   );
   els.arcadeCannon.setAttribute("aria-pressed", peel ? "true" : "false");
 }
@@ -1163,12 +1169,12 @@ function setArcadeWeapon(mode) {
     hideArcadeAimLine();
     setArcadeCannonRotationDeg(0);
   }
-  const { first, second } = phase1LabelFactors();
+  const { a, b } = st.q;
   const hints = {
     shoot:
-      `Tocá el cañón para −1. Dispará unos; pasá grupos de ${first} o ${second} al verde.`,
+      `Toca el cañón para −1. Dispara unos; cada grupo debe ser de ${b} (necesitas ${a} en el verde).`,
     peel:
-      "Tocá el cañón para +1. −1 saca 1 de una burbuja grande. Con 1 aparece 0 violeta. Del verde podés volver grupos.",
+      "Toca el cañón para +1. −1 saca 1 de una burbuja grande. Con 1 aparece 0 violeta. Del verde podés volver grupos.",
   };
   els.analyzerCollectHint.textContent = mode === "peel" ? hints.peel : hints.shoot;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
@@ -1373,7 +1379,7 @@ function arcadeFireToward(clientX, clientY) {
   const isPeelShot = arcadeWeapon === "peel";
   if (!isPeelShot) {
     if (arcadeAmmoLeft <= 0) {
-      showPhase1CollectError("No quedan unos. Tocá ↺.");
+      showPhase1CollectError("No quedan unos. Toca ↺.");
       return;
     }
     arcadeAmmoLeft--;
@@ -1489,14 +1495,9 @@ function onArcadeFieldClick(e) {
   arcadeFireToward(e.clientX, e.clientY);
 }
 
-function phase1LabelFactors() {
-  const { a, b } = st.q;
-  return st.analyzerFlipped ? { first: b, second: a } : { first: a, second: b };
-}
-
 function defaultAnalyzerPhase1Hint() {
-  const { first, second } = phase1LabelFactors();
-  return `Solo grupos de ${first} o ${second} al verde. El primero elige el tamaño.`;
+  const { a, b } = st.q;
+  return `Construye ${phase1MissionGroupsLabel(a, b)}. Pasá cada grupo al cuadro verde.`;
 }
 
 function clearAnalyzerCollectHintResetTimer() {
@@ -1578,6 +1579,10 @@ function showAnalyzerMemoryMode() {
   const { a, b } = st.q;
   els.analyzerStep.textContent = "Memoria";
   els.analyzerTitle.textContent = `${a} × ${b} = ?`;
+  if (els.analyzerMissionLine) {
+    els.analyzerMissionLine.textContent = "";
+    els.analyzerMissionLine.hidden = true;
+  }
   if (els.analyzerMemoryQuestion) els.analyzerMemoryQuestion.textContent = `${a} × ${b} = ?`;
   els.btnFlip.disabled = true;
   if (els.btnFlip) els.btnFlip.hidden = true;
@@ -1594,6 +1599,7 @@ function renderAnalyzerArcadeFull(/** @type {{ skipMissionIntro?: boolean }} */ 
   closeAllArcadeTeachingUi();
 
   st.analyzerPhase = 1;
+  st.analyzerFlipped = false;
   st.analyzerLockedSize = null;
   st.analyzerGroupsTarget = 0;
   st.arcadeAmmoLeft = product;
@@ -1610,6 +1616,10 @@ function renderAnalyzerArcadeFull(/** @type {{ skipMissionIntro?: boolean }} */ 
 
   els.analyzerStep.textContent = "1 / 2";
   els.analyzerTitle.textContent = `${a} × ${b} = ?`;
+  if (els.analyzerMissionLine) {
+    els.analyzerMissionLine.textContent = `Construye ${phase1MissionGroupsLabel(a, b)}.`;
+    els.analyzerMissionLine.hidden = false;
+  }
   if (els.analyzerLabel) {
     els.analyzerLabel.textContent = "";
     els.analyzerLabel.hidden = true;
@@ -1617,8 +1627,8 @@ function renderAnalyzerArcadeFull(/** @type {{ skipMissionIntro?: boolean }} */ 
 
   els.analyzerCollectHint.textContent = defaultAnalyzerPhase1Hint();
 
-  els.btnFlip.disabled = false;
-  if (els.btnFlip) els.btnFlip.hidden = false;
+  els.btnFlip.disabled = true;
+  if (els.btnFlip) els.btnFlip.hidden = true;
 
   els.collectionZone.innerHTML = "";
   els.sumWorkspace.innerHTML = "";
@@ -1662,8 +1672,8 @@ function updateAnalyzerCollectFooter() {
 
   if (lock == null) {
     els.analyzerFooterLine.textContent = n
-      ? `${n} en el verde · solo ${a} o ${b}`
-      : `Verde vacío: grupos de ${a} o ${b}`;
+      ? `${n} de ${phase1MissionGroupsLabel(a, b)} en el verde`
+      : `Construye ${phase1MissionGroupsLabel(a, b)} — pasa grupos de ${b} a la zona verde`;
   } else {
     els.analyzerFooterLine.textContent = `${n} de ${need} grupos de ${lock}`;
   }
@@ -1709,11 +1719,15 @@ function goAnalyzerSumPhase() {
   if (els.btnFlip) els.btnFlip.hidden = true;
 
   els.analyzerStep.textContent = "2 / 2 — Sumar";
+  if (els.analyzerMissionLine) {
+    els.analyzerMissionLine.textContent = "";
+    els.analyzerMissionLine.hidden = true;
+  }
   els.analyzerFooterLine.textContent =
-    `Sumá hasta ${st.q.product}. Arrastrá para juntar; tocá sin mover para partir.`;
+    `Sumá hasta ${st.q.product}. Arrastrá para juntar; toca sin mover para partir.`;
 
   els.analyzerSumHint.textContent =
-    "Arrastrá para sumar. Tocá sin mover para partir. Para juntar, escribí el número.";
+    "Arrastrá para sumar. Toca sin mover para partir. Para juntar, escribí el número.";
 
   const values = [];
   for (const node of els.collectionZone.children) {
@@ -1783,7 +1797,7 @@ function updateSumPhaseFeedback(message, isOk) {
       els.sumMergeHint.className = "sum-merge-hint";
     }
   } else {
-    els.sumMergeHint.textContent = `${nodes.length} burbujas: tocá para partir o arrastrá para sumar.`;
+    els.sumMergeHint.textContent = `${nodes.length} burbujas: toca para partir o arrastrá para sumar.`;
     els.sumMergeHint.className = "sum-merge-hint";
   }
 }
@@ -2257,7 +2271,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const raw = els.sumMergeAnswer.value.trim();
     const n = parseInt(raw, 10);
     if (raw === "" || Number.isNaN(n)) {
-      els.sumMergeFeedback.textContent = "Poné un número.";
+      els.sumMergeFeedback.textContent = "Escribe un número.";
       els.sumMergeFeedback.hidden = false;
       return;
     }
