@@ -72,6 +72,7 @@ function initEls() {
     timerWrap:          document.getElementById("timer-wrap"),
     timerBar:           document.getElementById("timer-bar"),
     question:           document.getElementById("question"),
+    questionWrap:       document.querySelector(".question-wrap"),
     answerBtns:         document.querySelectorAll(".answer-btn"),
     feedbackBar:        document.getElementById("feedback-bar"),
     feedbackTxt:        document.getElementById("feedback-text"),
@@ -348,6 +349,7 @@ function nextRound() {
     els.timerWrap.hidden = false;
     els.timerWrap.setAttribute("aria-hidden", "false");
     if (els.answersWrap) els.answersWrap.hidden = false;
+    if (els.questionWrap) els.questionWrap.hidden = false;
 
     const canAnalyze = st.q.product <= CONFIG.MAX_ANALYZER_PRODUCT;
     els.btnAnalyzer.hidden   = !canAnalyze;
@@ -359,6 +361,7 @@ function nextRound() {
     els.timerWrap.setAttribute("aria-hidden", "true");
     stopTimer();
     if (els.answersWrap) els.answersWrap.hidden = true;
+    if (els.questionWrap) els.questionWrap.hidden = true;
     els.btnAnalyzer.hidden = true;
 
     st.analyzerOpen = true;
@@ -556,11 +559,8 @@ function closeAnalyzer() {
       clearTimeout(arcadeRoundWinTimer);
       arcadeRoundWinTimer = 0;
     }
-    st.answered = true;
-    stopTimer();
-    showFeedback("Cerraste la ayuda. Sin puntos en esta ronda.", false);
-    revealAnswers(-1, false);
-    setTimeout(nextRound, 1400);
+    goToModeSelectFromGame();
+    return;
   } else if (st.gameMode === "memory" && !st.answered && !wasModalOnlyMemory) {
     resumeTimer();
   }
@@ -575,7 +575,7 @@ function flipAnalyzer() {
 function resetAnalyzer() {
   st.analyzerFlipped = false;
   if (st.analyzerHelpMode === "arcade") {
-    renderAnalyzerArcadeFull();
+    renderAnalyzerArcadeFull({ skipMissionIntro: true });
   } else if (st.analyzerHelpMode === "memory") {
     showAnalyzerMemoryMode();
   }
@@ -1549,7 +1549,7 @@ function renderAnalyzer() {
   }
   if (st.analyzerHelpMode === "arcade") {
     els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
-    renderAnalyzerArcadeFull();
+    renderAnalyzerArcadeFull({ skipMissionIntro: true });
   }
 }
 
