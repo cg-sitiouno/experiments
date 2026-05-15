@@ -973,6 +973,26 @@ function spawnArcadeMergeParticles(bubbleEl) {
   }
 }
 
+/** Partículas al hacer explotar un proyectil −1 (pared o burbuja). */
+function spawnArcadePeelBoltExplode(x, y) {
+  const zone = els.arcadeField;
+  if (!zone) return;
+  const colors = ["#fb923c", "#fdba74", "#fed7aa", "#fff7ed", "#f97316"];
+  for (let i = 0; i < 10; i++) {
+    const p = document.createElement("span");
+    p.className = "arcade-peel-bolt-particle";
+    p.style.left = `${x}px`;
+    p.style.top = `${y}px`;
+    const ang = (Math.PI * 2 * i) / 10 + Math.random() * 0.4;
+    const dist = 12 + Math.random() * 28;
+    p.style.setProperty("--pb-dx", `${Math.cos(ang) * dist}px`);
+    p.style.setProperty("--pb-dy", `${Math.sin(ang) * dist}px`);
+    p.style.background = colors[i % colors.length];
+    zone.appendChild(p);
+    window.setTimeout(() => p.remove(), 520);
+  }
+}
+
 function playArcadeMergeBurst(el) {
   el.classList.remove("arcade-bubble--merge-burst");
   void el.offsetWidth;
@@ -1176,6 +1196,9 @@ function bindArcadeUiOnce() {
 bindArcadeUiOnce._done = false;
 
 function arcadeRemoveBolt(bolt) {
+  if (bolt.peelBolt && els.arcadeField && !prefersReducedMotion()) {
+    spawnArcadePeelBoltExplode(bolt.x, bolt.y);
+  }
   const idx = arcadeBodies.indexOf(bolt);
   if (idx >= 0) arcadeBodies.splice(idx, 1);
   bolt.el.remove();

@@ -842,6 +842,22 @@ body {
     opacity: 0;
   }
 }
+.arcade-peel-bolt-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  animation: arcade-peel-bolt-particle-fly 0.5s ease-out forwards;
+}
+@keyframes arcade-peel-bolt-particle-fly {
+  to {
+    transform: translate(calc(-50% + var(--pb-dx)), calc(-50% + var(--pb-dy)));
+    opacity: 0;
+  }
+}
 @media (max-width: 520px) {
   .arcade-stage {
     grid-template-columns: 1fr;

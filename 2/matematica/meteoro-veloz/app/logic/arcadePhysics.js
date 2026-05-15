@@ -82,19 +82,22 @@ export function arcadePhysicsStep(bodies, ctx) {
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     const r = effectiveArcadeRadius(b);
-    if (b.x - r < 0) {
-      b.x = r;
-      b.vx *= -wallBounce;
-    } else if (b.x + r > fw) {
-      b.x = fw - r;
-      b.vx *= -wallBounce;
-    }
-    if (b.y - r < 0) {
-      b.y = r;
-      b.vy *= -wallBounce;
-    } else if (b.y + r > fh) {
-      b.y = fh - r;
-      b.vy *= -wallBounce;
+    // Proyectil −1: no rebota; si toca pared (tras resolver burbujas) se elimina sin efecto.
+    if (!b.peelBolt) {
+      if (b.x - r < 0) {
+        b.x = r;
+        b.vx *= -wallBounce;
+      } else if (b.x + r > fw) {
+        b.x = fw - r;
+        b.vx *= -wallBounce;
+      }
+      if (b.y - r < 0) {
+        b.y = r;
+        b.vy *= -wallBounce;
+      } else if (b.y + r > fh) {
+        b.y = fh - r;
+        b.vy *= -wallBounce;
+      }
     }
     syncDom(b);
   }
@@ -172,6 +175,15 @@ export function arcadePhysicsStep(bodies, ctx) {
           syncDom(b);
         }
       }
+    }
+  }
+
+  for (let i = bodies.length - 1; i >= 0; i--) {
+    const b = bodies[i];
+    if (!b.peelBolt) continue;
+    const r = effectiveArcadeRadius(b);
+    if (b.x - r < 0 || b.x + r > fw || b.y - r < 0 || b.y + r > fh) {
+      removeBolt(b);
     }
   }
 }
