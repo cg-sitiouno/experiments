@@ -39,7 +39,7 @@
       right: 8,
       title: "Paso 1 de 3 — Suma y burbujas",
       body:
-        "Arriba está la cuenta que hay que resolver. Tocá el 7 u el 8 (sin arrastrar) para partirlo en dos piezas más chicas. Después arrastrá una burbuja sobre otra: se suman y el juego te pedirá el resultado en un cuadro. Objetivo: quedar con una sola burbuja que muestre 15.",
+        "Arriba está la cuenta que hay que resolver. Toca el 7 u el 8 (sin arrastrar) para partirlo en dos piezas más chicas. Después arrastrá una burbuja sobre otra: se suman y el juego te pedirá el resultado en un cuadro. Objetivo: quedar con una sola burbuja que muestre 15.",
     },
     {
       op: "add",
@@ -869,7 +869,7 @@
 
   function feedbackBlockedSubtraction(b, partner) {
     setHelpStickySecondary(
-      "No podés restar si la parte del minuendo es más chica que el sustraendo. Usá una pieza del minuendo mayor o igual al rojo, o sumá antes partes del minuendo."
+      "No podés restar si la parte del minuendo es más chica que el sustraendo. Usá una pieza del minuendo mayor o igual al rojo, o suma antes partes del minuendo."
     );
     for (const id of [b.id, partner.id]) {
       const bel = els.playArea.querySelector('.bubble[data-id="' + id + '"]');
@@ -963,7 +963,7 @@
         "."
       );
     }
-    return "Tocá una burbuja para descomponer o arrastrá para acercarlas y sumar.";
+    return "Toca una burbuja para descomponer o arrastrá para acercarlas y sumar.";
   }
 
   function buildSecondaryAddition(hintStats) {
@@ -972,7 +972,7 @@
     const target = state.expectedResult;
 
     if (hintStats.multiTens) {
-      return "En la mesa hay varias decenas: sumá primero esas piezas (resplandor dorado).";
+      return "En la mesa hay varias decenas: suma primero esas piezas (resplandor dorado).";
     }
     if (hintStats.fiveAndSmall) {
       return "Tenés un 5 y piezas del 1 al 4: encajan bien entre sí (resplandor celeste).";
@@ -1035,7 +1035,7 @@
         subParts[0].value +
         ": juntalo con una pieza del minuendo ≥ " +
         subParts[0].value +
-        ", o sumá antes partes del minuendo (" +
+        ", o suma antes partes del minuendo (" +
         mvs +
         ")."
       );

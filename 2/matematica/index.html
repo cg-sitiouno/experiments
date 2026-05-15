@@ -147,6 +147,53 @@
           <h2 class="game-card__title">Mystery Box</h2>
           <p class="game-card__tagline">Descubre el número escondido</p>
         </a>
+
+        <a
+          class="game-card game-card--meteor"
+          href="meteoro-veloz/index.html"
+          aria-label="Abrir Meteoro Veloz — tablas de multiplicar contra el reloj"
+        >
+          <div class="game-card__art" aria-hidden="true">
+            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img">
+              <title>Meteoro y tabla de multiplicar</title>
+              <defs>
+                <radialGradient id="mv-meteor" cx="35%" cy="30%" r="65%">
+                  <stop offset="0%" stop-color="#fed7aa" />
+                  <stop offset="55%" stop-color="#f97316" />
+                  <stop offset="100%" stop-color="#7c2d12" />
+                </radialGradient>
+                <radialGradient id="mv-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#f97316" stop-opacity="0.45" />
+                  <stop offset="100%" stop-color="#f97316" stop-opacity="0" />
+                </radialGradient>
+                <filter id="mv-blur" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="5" />
+                </filter>
+              </defs>
+              <!-- estrellas de fondo -->
+              <circle cx="30"  cy="25"  r="1.2" fill="#fff" opacity="0.5" />
+              <circle cx="75"  cy="18"  r="0.9" fill="#fff" opacity="0.4" />
+              <circle cx="158" cy="32"  r="1.1" fill="#fff" opacity="0.45" />
+              <circle cx="185" cy="75"  r="0.8" fill="#fff" opacity="0.35" />
+              <circle cx="20"  cy="110" r="1"   fill="#fff" opacity="0.4" />
+              <circle cx="165" cy="155" r="1.2" fill="#fff" opacity="0.35" />
+              <!-- trayectoria del meteoro -->
+              <line x1="155" y1="40" x2="95" y2="100" stroke="rgba(249,115,22,0.2)" stroke-width="14" stroke-linecap="round" />
+              <line x1="155" y1="40" x2="95" y2="100" stroke="rgba(249,115,22,0.45)" stroke-width="5" stroke-linecap="round" />
+              <!-- halo -->
+              <circle cx="95" cy="100" r="38" fill="url(#mv-glow)" filter="url(#mv-blur)" />
+              <!-- meteoro -->
+              <circle cx="95" cy="100" r="32" fill="url(#mv-meteor)" />
+              <ellipse cx="85" cy="90" rx="8" ry="5" fill="rgba(255,255,255,0.12)" transform="rotate(-20 85 90)" />
+              <!-- multiplicación -->
+              <text x="100" y="175" text-anchor="middle" font-size="22" font-family="Nunito, sans-serif" font-weight="900" fill="#f97316" opacity="0.9">×</text>
+              <text x="76"  y="175" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="900" fill="#fed7aa" opacity="0.75">6</text>
+              <text x="124" y="175" text-anchor="middle" font-size="18" font-family="Nunito, sans-serif" font-weight="900" fill="#fed7aa" opacity="0.75">7</text>
+            </svg>
+          </div>
+          <h2 class="game-card__title">Meteoro Veloz</h2>
+          <p class="game-card__tagline">Tablas de multiplicar contra el reloj</p>
+        </a>
       </div>
     </section>
   </body>
