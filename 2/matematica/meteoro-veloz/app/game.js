@@ -959,12 +959,13 @@ function spawnArcadeMergeParticles(bubbleEl) {
   const cx = br.left + br.width / 2 - zr.left + zone.scrollLeft;
   const cy = br.top + br.height / 2 - zr.top + zone.scrollTop;
   const colors = ["#7dd3fc", "#fde047", "#a7f3d0", "#e9d5ff", "#fff"];
-  for (let i = 0; i < 12; i++) {
+  const n = arcadePressToPlay() ? 5 : 12;
+  for (let i = 0; i < n; i++) {
     const p = document.createElement("span");
     p.className = "arcade-merge-particle";
     p.style.left = `${cx}px`;
     p.style.top = `${cy}px`;
-    const ang = (Math.PI * 2 * i) / 12 + Math.random() * 0.35;
+    const ang = (Math.PI * 2 * i) / n + Math.random() * 0.35;
     const dist = 16 + Math.random() * 34;
     p.style.setProperty("--am-dx", `${Math.cos(ang) * dist}px`);
     p.style.setProperty("--am-dy", `${Math.sin(ang) * dist}px`);
@@ -979,12 +980,13 @@ function spawnArcadePeelBoltExplode(x, y) {
   const zone = els.arcadeField;
   if (!zone) return;
   const colors = ["#fb923c", "#fdba74", "#fed7aa", "#fff7ed", "#f97316"];
-  for (let i = 0; i < 10; i++) {
+  const n = arcadePressToPlay() ? 4 : 10;
+  for (let i = 0; i < n; i++) {
     const p = document.createElement("span");
     p.className = "arcade-peel-bolt-particle";
     p.style.left = `${x}px`;
     p.style.top = `${y}px`;
-    const ang = (Math.PI * 2 * i) / 10 + Math.random() * 0.4;
+    const ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
     const dist = 12 + Math.random() * 28;
     p.style.setProperty("--pb-dx", `${Math.cos(ang) * dist}px`);
     p.style.setProperty("--pb-dy", `${Math.sin(ang) * dist}px`);
@@ -1281,10 +1283,12 @@ function mergeBodiesKeepFirst(keep, drop) {
 
 function arcadeStep(dt) {
   arcadeGroupBuiltEvents.length = 0;
-  const fr = els.arcadeField.getBoundingClientRect();
+  const field = els.arcadeField;
+  const fw = field.clientWidth;
+  const fh = field.clientHeight;
   arcadePhysicsStep(arcadeBodies, {
-    fieldW: fr.width,
-    fieldH: fr.height,
+    fieldW: fw,
+    fieldH: fh,
     dt,
     friction: ARCADE_FRICTION,
     wallBounce: ARCADE_WALL_BOUNCE,
