@@ -13,10 +13,10 @@ export const CONFIG = {
 };
 
 export const RESULT_MSGS = [
-  "¡Sigue practicando! Los meteoritos son veloces.",
-  "¡Bien! Vas esquivando los meteoritos.",
-  "¡Muy bien! Reflejos de astronauta.",
-  "¡Perfecto! Eres un defensor del sistema solar. 🏆",
+  "¡Seguí practicando!",
+  "¡Bien!",
+  "¡Muy bien!",
+  "¡Genial! 🏆",
 ];
 
 /* ── Arcade (paso 1 analizador) ── */

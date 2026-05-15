@@ -52,6 +52,7 @@ export function bounceNonMerge(a, b, ra, rb, d) {
  *   syncDom: (b: object) => void,
  *   removeBolt: (bolt: object) => void,
  *   peelBubbleHitByBolt: (bubble: object) => void,
+ *   annihilateOneWithBolt: (bolt: object, bubble: object) => void,
  *   mergeBodiesKeepFirst: (keep: object, drop: object) => void,
  * }} ctx
  */
@@ -66,6 +67,7 @@ export function arcadePhysicsStep(bodies, ctx) {
     syncDom,
     removeBolt,
     peelBubbleHitByBolt,
+    annihilateOneWithBolt,
     mergeBodiesKeepFirst,
   } = ctx;
 
@@ -117,11 +119,16 @@ export function arcadePhysicsStep(bodies, ctx) {
           syncDom(b);
           continue;
         }
-        // Proyectil −1 vs burbuja: si talla ≤ 1, rebote; si > 1, consume el bolt y resta 1 en la misma burbuja (sin spawneear un 1).
+        // Proyectil −1 vs burbuja: 1 + (−1) → 0; 0 rebota; si > 1, pelar.
         if (pa !== pb) {
           const bolt = pa ? a : b;
           const bubble = pa ? b : a;
-          if (bubble.value <= 1) {
+          if (bubble.value === 1) {
+            annihilateOneWithBolt(bolt, bubble);
+            mergedAny = true;
+            break outer;
+          }
+          if (bubble.value < 1) {
             bounceNonMerge(a, b, ra, rb, d || 0.001);
             syncDom(a);
             syncDom(b);
@@ -129,6 +136,11 @@ export function arcadePhysicsStep(bodies, ctx) {
           }
           removeBolt(bolt);
           peelBubbleHitByBolt(bubble);
+          mergedAny = true;
+          break outer;
+        }
+        if (a.value === 0 || b.value === 0) {
+          mergeBodiesKeepFirst(a, b);
           mergedAny = true;
           break outer;
         }
@@ -154,7 +166,7 @@ export function arcadePhysicsStep(bodies, ctx) {
         const rb = effectiveArcadeRadius(b);
         if (a.peelBolt || b.peelBolt) continue;
         const d = Math.hypot(b.x - a.x, b.y - a.y) || 0.001;
-        if (d < ra + rb - 0.5 && a.value !== 1 && b.value !== 1) {
+        if (d < ra + rb - 0.5 && a.value !== 1 && b.value !== 1 && a.value !== 0 && b.value !== 0) {
           bounceNonMerge(a, b, ra, rb, d);
           syncDom(a);
           syncDom(b);

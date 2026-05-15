@@ -728,6 +728,15 @@ body {
     inset 0 2px 8px rgba(255, 255, 255, 0.28),
     0 4px 16px rgba(249, 115, 22, 0.45);
 }
+/* Cero neutro: 1 + (−1); al chocar con otro número desaparece sin cambiarlo */
+.arcade-bubble--neutral-zero {
+  border: 3px dashed rgba(233, 213, 255, 0.95);
+  background: radial-gradient(circle at 35% 30%, #faf5ff, #8b5cf6 45%, #4c1d95 100%);
+  color: #f5f3ff;
+  box-shadow:
+    inset 0 2px 10px rgba(255, 255, 255, 0.3),
+    0 0 20px rgba(139, 92, 246, 0.55);
+}
 .arcade-bubble--merge-burst {
   animation: arcade-bubble-merge 0.45s ease-out;
 }

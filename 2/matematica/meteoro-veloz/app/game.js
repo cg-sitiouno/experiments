@@ -178,10 +178,11 @@ function openArcadeMissionModal(onContinue) {
   arcadeMissionContinue = onContinue;
   if (els.arcadeMissionKicker) els.arcadeMissionKicker.textContent = `${a} × ${b}`;
   if (els.arcadeMissionTitle) els.arcadeMissionTitle.textContent = "Tu misión";
-  if (els.arcadeMissionLead) els.arcadeMissionLead.textContent = `Armá ${a} grupos de ${b}.`;
+  if (els.arcadeMissionLead) els.arcadeMissionLead.textContent = `Construye ${a} grupos de ${b}.`;
   if (els.arcadeMissionDetail) {
     els.arcadeMissionDetail.textContent =
-      "Usá el cañón: +1 dispara unos en el campo y se suman al chocar; −1 baja una unidad en la burbuja tocada. Formá grupos del tamaño que necesitás y soltálos en la zona verde de la derecha (zona de grupos). Llená la zona con todos los grupos que pide la cuenta.";
+      // simplificamos instrucciones para un formato más conciso
+      "Dispara 1 para sumar y -1 para disminuir";      
   }
   els.arcadeMissionModal.hidden = false;
   window.setTimeout(() => els.btnArcadeMissionOk?.focus(), 40);
@@ -193,7 +194,7 @@ function openArcadePhase1CompleteModal() {
   if (!els.arcadePhase1DoneModal) return;
   if (els.arcadePhase1DoneBody) {
     els.arcadePhase1DoneBody.textContent =
-      "Felicitaciones: ya construiste los grupos que necesitamos. Ahora vamos a sumarlos.";
+      "¡Listo con los grupos! Ahora toca sumar.";
   }
   els.arcadePhase1DoneModal.hidden = false;
   window.setTimeout(() => els.btnArcadePhase1Continue?.focus(), 40);
@@ -204,7 +205,7 @@ function openArcadeGroupPlacedModal(gv) {
   if (!els.arcadeGroupPlacedModal) return;
   if (els.arcadeGroupPlacedBody) {
     els.arcadeGroupPlacedBody.textContent =
-      `El sistema detectó que armaste un grupo de ${gv}. Lleválo a la zona verde de la derecha (zona de grupos) para guardarlo. Podés arrastrarlo de vuelta al campo si querés corregir, o seguí armando el resto.`;
+      `Tenés un grupo de ${gv}. Pasalo al cuadro verde. Si te equivocaste, devolvelo al campo.`;
   }
   if (els.arcadeGroupPlacedSkip) els.arcadeGroupPlacedSkip.checked = false;
   els.arcadeGroupPlacedModal.hidden = false;
@@ -276,7 +277,7 @@ function showScreen(name) {
 
 function updateModeScreenCopy() {
   const lvl = st.pendingLevel ?? st.level ?? 1;
-  if (els.modeScreenLead) els.modeScreenLead.textContent = `Nivel ${lvl} — elegí cómo querés jugar`;
+  if (els.modeScreenLead) els.modeScreenLead.textContent = `Nivel ${lvl} — ¿cómo jugamos?`;
 }
 
 /** Desde la partida: mismo nivel, otra vez selector de modo. */
@@ -463,20 +464,20 @@ function showMemoryRoundOutcome(kind) {
   if (kind === "success") {
     els.memoryRoundCard.classList.add("memory-round-modal__card--success");
     els.memoryRoundTitle.textContent = "¡Muy bien!";
-    els.memoryRoundMessage.textContent = `Acertaste: ${a} × ${b} = ${product}. Seguí así.`;
+    els.memoryRoundMessage.textContent = `${a} × ${b} = ${product}. ¡Bien!`;
   } else if (kind === "wrong") {
     els.memoryRoundCard.classList.add("memory-round-modal__card--try");
-    els.memoryRoundTitle.textContent = "¡Seguí practicando!";
+    els.memoryRoundTitle.textContent = "¡Casi!";
     els.memoryRoundMessage.textContent =
-      `Esa no era la respuesta. La cuenta era ${a} × ${b} = ${product}. Dale otra oportunidad en el próximo reto.`;
+      `Era ${a} × ${b} = ${product}.`;
   } else {
     els.memoryRoundCard.classList.add("memory-round-modal__card--try");
     els.memoryRoundTitle.textContent = "¡Se acabó el tiempo!";
     els.memoryRoundMessage.textContent =
-      `Era ${a} × ${b} = ${product}. No pasa nada: respirá y probá en el siguiente.`;
+      `Era ${a} × ${b} = ${product}.`;
   }
 
-  els.btnMemoryRoundNext.textContent = lastRound ? "Ver resultado" : "Siguiente reto";
+  els.btnMemoryRoundNext.textContent = lastRound ? "Ver resultado" : "Siguiente";
   window.setTimeout(() => els.btnMemoryRoundNext.focus(), 30);
 }
 
@@ -557,7 +558,7 @@ function closeAnalyzer() {
     }
     st.answered = true;
     stopTimer();
-    showFeedback("Cerraste la ayuda. Ronda sin puntos.", false);
+    showFeedback("Cerraste la ayuda. Sin puntos en esta ronda.", false);
     revealAnswers(-1, false);
     setTimeout(nextRound, 1400);
   } else if (st.gameMode === "memory" && !st.answered && !wasModalOnlyMemory) {
@@ -644,7 +645,12 @@ function resetRackLockIfEmpty() {
 function tryCommitBodyToCollection(body) {
   if (body.peelBolt) {
     shakeElement(body.el);
-    showPhase1CollectError("El proyectil no va a la zona de grupos.");
+    showPhase1CollectError("Eso no va al cuadro verde.");
+    return false;
+  }
+  if (body.value === 0) {
+    shakeElement(body.el);
+    showPhase1CollectError("El cero no va al verde.");
     return false;
   }
   const v = body.value;
@@ -659,12 +665,12 @@ function tryCommitBodyToCollection(body) {
     st.analyzerGroupsTarget = v === a ? bf : a;
   } else if (v !== st.analyzerLockedSize) {
     shakeElement(body.el);
-    showPhase1CollectError(`Ya elegiste tamaño ${st.analyzerLockedSize}. No podés mezclar con ${v}.`);
+    showPhase1CollectError(`Solo grupos de ${st.analyzerLockedSize}.`);
     return false;
   }
   if (els.collectionZone.children.length >= st.analyzerGroupsTarget) {
     shakeElement(body.el);
-    showPhase1CollectError("La zona de grupos está llena.");
+    showPhase1CollectError("Acá ya no entran más.");
     return false;
   }
   const idx = arcadeBodies.indexOf(body);
@@ -923,17 +929,20 @@ function syncArcadeBodyDom(b) {
   b.el.style.height = `${s}px`;
   b.el.style.left = `${b.x - r}px`;
   b.el.style.top = `${b.y - r}px`;
-  b.el.style.fontSize = `${Math.min(1.5, 0.82 + Math.sqrt(n) * 0.14)}rem`;
+  b.el.style.fontSize = `${Math.min(1.5, 0.82 + Math.sqrt(Math.max(1, n)) * 0.14)}rem`;
   if (b.peelBolt) {
     b.el.textContent = "−1";
     b.el.dataset.value = "-1";
     b.el.setAttribute("aria-label", "Menos uno");
     b.el.classList.add("arcade-bubble--peel-bolt");
+    b.el.classList.remove("arcade-bubble--neutral-zero");
   } else {
     b.el.textContent = String(b.value);
     b.el.dataset.value = String(b.value);
-    b.el.setAttribute("aria-label", String(b.value));
+    b.el.setAttribute("aria-label", b.value === 0 ? "Cero neutro" : String(b.value));
     b.el.classList.remove("arcade-bubble--peel-bolt");
+    if (b.value === 0) b.el.classList.add("arcade-bubble--neutral-zero");
+    else b.el.classList.remove("arcade-bubble--neutral-zero");
   }
 }
 
@@ -1068,10 +1077,9 @@ function setArcadeWeapon(mode) {
   const { first, second } = phase1LabelFactors();
   const hints = {
     shoot:
-      "Dispará +1 hacia el campo. Arrastrá burbujas a la zona de grupos (solo tamaños " +
-      `${first} o ${second}; el primero fija el tamaño).`,
+      `+1: dispará unos. Pasá grupos de ${first} o ${second} al verde (el primero elige el tamaño).`,
     peel:
-      "−1: dispará contra una burbuja > 1 o tocá sin arrastrar para pelar y desprender un 1. Podés devolver fichas de la zona de grupos al campo arrastrando.",
+      "−1: sacá 1 de una burbuja grande. Si −1 choca con 1, aparece 0 (violeta). Del verde podés volver grupos al campo.",
   };
   els.analyzerCollectHint.textContent = mode === "peel" ? hints.peel : hints.shoot;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
@@ -1102,7 +1110,24 @@ function arcadeRemoveBolt(bolt) {
   bolt.el.remove();
 }
 
-/** Impacto del proyectil −1: solo baja el número en la misma burbuja (no se desprende un 1). */
+/** 1 + (−1) en colisión: desaparece el proyectil y la burbuja pasa a ser 0 (neutro). */
+function arcadeAnnihilateOneWithBolt(bolt, bubble) {
+  arcadeRemoveBolt(bolt);
+  if (bubble.peelBolt) return;
+  bubble.value = 0;
+  syncArcadeBodyDom(bubble);
+  grantArcadeAmmoForPeel();
+}
+
+function absorbNeutralZero(survivor, zeroBody) {
+  if (zeroBody.peelBolt || survivor.peelBolt) return;
+  const zIdx = arcadeBodies.indexOf(zeroBody);
+  if (zIdx >= 0) arcadeBodies.splice(zIdx, 1);
+  zeroBody.el.remove();
+  syncArcadeBodyDom(survivor);
+}
+
+/** Impacto del proyectil −1: baja 1 en la misma burbuja (solo si vale más de 1). */
 function arcadePeelBubbleHitByBolt(b) {
   if (b.peelBolt || b.value <= 1) return;
   b.value -= 1;
@@ -1147,6 +1172,14 @@ function arcadePeelBubbleInPlace(b) {
 
 function mergeBodiesKeepFirst(keep, drop) {
   if (keep.peelBolt || drop.peelBolt) return;
+  if (keep.value === 0 && drop.value !== 0) {
+    absorbNeutralZero(drop, keep);
+    return;
+  }
+  if (drop.value === 0 && keep.value !== 0) {
+    absorbNeutralZero(keep, drop);
+    return;
+  }
   keep.x = (keep.x + drop.x) / 2;
   keep.y = (keep.y + drop.y) / 2;
   keep.value += drop.value;
@@ -1181,6 +1214,7 @@ function arcadeStep(dt) {
     syncDom: syncArcadeBodyDom,
     removeBolt: arcadeRemoveBolt,
     peelBubbleHitByBolt: arcadePeelBubbleHitByBolt,
+    annihilateOneWithBolt: arcadeAnnihilateOneWithBolt,
     mergeBodiesKeepFirst,
   });
   for (const gv of arcadeGroupBuiltEvents) {
@@ -1244,7 +1278,7 @@ function arcadeFireToward(clientX, clientY) {
   const isPeelShot = arcadeWeapon === "peel";
   if (!isPeelShot) {
     if (arcadeAmmoLeft <= 0) {
-      showPhase1CollectError("Sin unos — reiniciá.");
+      showPhase1CollectError("No quedan unos. Tocá ↺.");
       return;
     }
     arcadeAmmoLeft--;
@@ -1363,7 +1397,7 @@ function phase1LabelFactors() {
 
 function defaultAnalyzerPhase1Hint() {
   const { first, second } = phase1LabelFactors();
-  return `Arrastrá a la zona de grupos solo burbujas de ${first} o ${second} (la primera fija el tamaño). +1 / −1 en la dock.`;
+  return `Solo grupos de ${first} o ${second} al verde. El primero elige el tamaño.`;
 }
 
 function clearAnalyzerCollectHintResetTimer() {
@@ -1417,8 +1451,7 @@ function fillMemoryTableContent() {
   const { maxMult } = CONFIG.LEVELS[st.level];
   const hi = Math.max(maxMult, b);
   els.memoryTableHeading.textContent = `Tabla del ${a}`;
-  els.memoryTableSub.textContent =
-    `El resto de las filas está completo; en ${a} × ${b} el resultado aparece como ?.`;
+  els.memoryTableSub.textContent = `Tu cuenta es ${a} × ${b}. En la tabla está con ?.`;
   els.memoryTableBody.innerHTML = "";
   for (let k = 1; k <= hi; k++) {
     const row = document.createElement("div");
@@ -1449,7 +1482,7 @@ function showAnalyzerMemoryMode() {
   if (els.analyzerMemoryQuestion) els.analyzerMemoryQuestion.textContent = `${a} × ${b} = ?`;
   els.btnFlip.disabled = true;
   els.analyzerFooterLine.textContent =
-    "Abrí la tabla si necesitás contexto. Cerrá con ✕ para volver al juego y elegir respuesta.";
+    "Mirá la tabla si querés. Cerrá con ✕ y elegí abajo.";
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
 }
 
@@ -1528,10 +1561,10 @@ function updateAnalyzerCollectFooter() {
 
   if (lock == null) {
     els.analyzerFooterLine.textContent = n
-      ? `${n} en zona de grupos · solo tamaños ${a} o ${b}`
-      : `Zona de grupos vacía · arrastrá grupos de ${a} o de ${b}`;
+      ? `${n} en el verde · solo ${a} o ${b}`
+      : `Verde vacío: grupos de ${a} o ${b}`;
   } else {
-    els.analyzerFooterLine.textContent = `${n} / ${need} grupos de ${lock}`;
+    els.analyzerFooterLine.textContent = `${n} de ${need} grupos de ${lock}`;
   }
 
   if (
@@ -1555,7 +1588,7 @@ function goAnalyzerSumPhase() {
 
   for (const node of els.collectionZone.children) {
     if (Number(node.dataset.value) !== lock) {
-      showPhase1CollectError(`Todos los grupos deben valer ${lock}. Revisá el panel o reiniciá.`);
+      showPhase1CollectError(`Todos tienen que ser ${lock}.`);
       return;
     }
   }
@@ -1573,12 +1606,12 @@ function goAnalyzerSumPhase() {
   els.analyzerSumWrap.hidden = false;
   els.btnFlip.disabled = true;
 
-  els.analyzerStep.textContent = "Paso 2 de 2 — Sumar";
+  els.analyzerStep.textContent = "2 / 2 — Sumar";
   els.analyzerFooterLine.textContent =
-    `Fusioná arrastrando una burbuja sobre otra, o tocá sin mover para partir. Objetivo: ${st.q.product}.`;
+    `Sumá hasta ${st.q.product}. Arrastrá para juntar; tocá sin mover para partir.`;
 
   els.analyzerSumHint.textContent =
-    "Cada burbuja vale lo que tenías en la cesta. Tocá una burbuja sin arrastrarla para partirla (como en Bubble Math Lab). Arrastrá una sobre otra para fusionar y escribir la suma.";
+    "Arrastrá para sumar. Tocá sin mover para partir. Para juntar, escribí el número.";
 
   const values = [];
   for (const node of els.collectionZone.children) {
@@ -1636,19 +1669,19 @@ function updateSumPhaseFeedback(message, isOk) {
     if (v === st.q.product) {
       els.sumMergeHint.textContent =
         st.gameMode === "arcade"
-          ? "¡Listo! Mirá el mensaje para seguir."
-          : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Volvé al juego y elegí la respuesta.`;
+          ? "¡Listo! Mirá el cartel."
+          : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Cerrá y elegí la respuesta.`;
       els.sumMergeHint.className = "sum-merge-hint sum-merge-hint--ok";
       if (st.gameMode === "arcade") scheduleArcadeRoundWin();
     } else {
       els.sumMergeHint.textContent =
         v < st.q.product
-          ? `Tenés ${v}. Seguí fusionando o usá Reiniciar.`
-          : `Tenés ${v} (el objetivo era ${st.q.product}). Podés reiniciar el analizador.`;
+          ? `Tenés ${v}. Falta llegar a ${st.q.product}.`
+          : `Tenés ${v}. Hacían falta ${st.q.product}.`;
       els.sumMergeHint.className = "sum-merge-hint";
     }
   } else {
-    els.sumMergeHint.textContent = `${nodes.length} burbujas — tocá sin mover para partir o arrastrá para fusionar.`;
+    els.sumMergeHint.textContent = `${nodes.length} burbujas: tocá para partir o arrastrá para sumar.`;
     els.sumMergeHint.className = "sum-merge-hint";
   }
 }
@@ -1773,12 +1806,12 @@ function decomposePartsForSumBubble(el) {
 
 function decomposeBlockedSumMessage(value) {
   if (value < MIN_DECOMPOSE) {
-    return `Menor que ${MIN_DECOMPOSE}: no se parte. Fusioná con otra burbuja.`;
+    return "Muy chica para partir. Sumá con otra.";
   }
   if (value === 5) {
-    return "El 5 no se parte acá. Fusioná con otro número.";
+    return "El 5 no se parte acá. Sumá con otra.";
   }
-  return "Esa burbuja no se puede dividir así. Probá fusionar.";
+  return "Así no se parte. Probá sumar.";
 }
 
 function addSumBubbleToWorkspace(value, xPct, yPct, extraClass) {
@@ -1836,7 +1869,7 @@ function finalizeDecomposeSum(el, v1, v2, ox, oy, x1, y1, x2, y2) {
     );
   }
   sumDecomposeAnimating = false;
-  updateSumPhaseFeedback(`Partimos en ${v1} + ${v2}`, false);
+  updateSumPhaseFeedback(`Quedó ${v1} + ${v2}`, false);
   window.setTimeout(() => {
     els.sumMergeHint.className = "sum-merge-hint";
     updateSumPhaseFeedback();
@@ -2122,12 +2155,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const raw = els.sumMergeAnswer.value.trim();
     const n = parseInt(raw, 10);
     if (raw === "" || Number.isNaN(n)) {
-      els.sumMergeFeedback.textContent = "Escribí un número.";
+      els.sumMergeFeedback.textContent = "Poné un número.";
       els.sumMergeFeedback.hidden = false;
       return;
     }
     if (n !== pm.expected) {
-      els.sumMergeFeedback.textContent = "No da ese resultado. Probá otra vez.";
+      els.sumMergeFeedback.textContent = "No da. Probá de nuevo.";
       els.sumMergeFeedback.hidden = false;
       els.sumMergeAnswer.value = "";
       els.sumMergeAnswer.focus();

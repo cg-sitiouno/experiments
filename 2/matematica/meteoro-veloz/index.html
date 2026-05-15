@@ -16,7 +16,7 @@
       <a href="../index.html" class="link-hub">← Matemática</a>
       <div class="meteor-hero" aria-hidden="true">🌑</div>
       <h1 class="start-title">Meteoro Veloz</h1>
-      <p class="start-desc">Elegí un nivel y después el modo: memoria (tiempo y opciones) o arcade (armar el producto con grupos).</p>
+      <p class="start-desc">Elegí nivel y modo: memoria (con tiempo) o arcade (armar la cuenta con grupos).</p>
       <div class="level-grid" role="group" aria-label="Elige un nivel">
         <button type="button" class="btn-level" data-level="1">
           <span class="btn-level__name">Nivel 1</span>
@@ -43,13 +43,13 @@
         <button type="button" class="analyzer-mode-card" id="btn-mode-memory">
           <span class="analyzer-mode-card__title">Modo memoria</span>
           <span class="analyzer-mode-card__desc">
-            Aparece la cuenta con tiempo y cuatro respuestas. Si no recordás, pedí ayuda y mirá la tabla con el renglón de esta cuenta como ?.
+            Cuenta con tiempo y cuatro respuestas. Si te trabás, abrí la tabla con la ayuda.
           </span>
         </button>
         <button type="button" class="analyzer-mode-card" id="btn-mode-arcade">
           <span class="analyzer-mode-card__title">Modo arcade</span>
           <span class="analyzer-mode-card__desc">
-            Sin botones de respuesta: resolvé la multiplicación armando grupos en la zona verde y sumando burbujas hasta llegar al producto.
+            Sin botones: armá grupos al verde y sumá hasta llegar al resultado.
           </span>
         </button>
       </div>
@@ -85,7 +85,7 @@
       </div>
 
       <button type="button" class="btn-analyzer" id="btn-open-analyzer" hidden>
-        🔍 No recuerdo — ayuda
+        🔍 Ayuda
       </button>
 
       <button type="button" class="btn-ghost" id="btn-menu">← Menú</button>
@@ -110,7 +110,7 @@
           <div class="analyzer-memory-inner">
             <p id="analyzer-memory-question" class="analyzer-memory-question" aria-live="polite"></p>
             <p class="analyzer-memory-copy">
-              Pensá el resultado y cerrá esta ventana para elegir tu respuesta en la partida.
+              Pensá el número, cerrá y elegí abajo.
             </p>
             <button type="button" class="btn-memory-table" id="btn-memory-table-help">
               Ver tabla (ayuda)
@@ -123,7 +123,7 @@
             <div
               id="arcade-field"
               class="arcade-field"
-              aria-label="Zona de juego. +1/−1 en la dock. Arrastrá burbujas a la zona de grupos o devolvélas al campo. Ratón: apuntá y clic para disparar."
+              aria-label="Campo de juego. +1 y −1 abajo. Arrastrá grupos al verde."
             >
               <svg id="arcade-aim-svg" class="arcade-aim-svg" aria-hidden="true">
                 <line
@@ -137,7 +137,7 @@
               </svg>
               <div id="arcade-muzzle" class="arcade-muzzle" aria-hidden="true"></div>
             </div>
-            <aside class="arcade-side" aria-label="Zona de grupos: soltá burbujas aquí o arrástralas de vuelta al campo">
+            <aside class="arcade-side" aria-label="Cuadro verde: soltá grupos acá o devolvelos al campo">
               <div id="collection-zone" class="arcade-group-rack"></div>
             </aside>
             <div class="arcade-dock">
@@ -176,14 +176,14 @@
             aria-modal="true"
             aria-labelledby="arcade-group-placed-title"
           >
-            <h2 id="arcade-group-placed-title" class="arcade-flow-modal__title">Grupo listo</h2>
+            <h2 id="arcade-group-placed-title" class="arcade-flow-modal__title">¡Tenés un grupo!</h2>
             <p id="arcade-group-placed-body" class="arcade-flow-modal__body"></p>
             <label class="arcade-flow-modal__check">
               <input type="checkbox" id="arcade-group-placed-skip" />
-              No volver a mostrar este aviso
+              No mostrar más
             </label>
             <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-group-placed-ok">
-              Entendido
+              Listo
             </button>
           </div>
         </div>
@@ -196,7 +196,7 @@
             aria-modal="true"
             aria-labelledby="arcade-mission-complete-title"
           >
-            <h2 id="arcade-mission-complete-title" class="arcade-flow-modal__title">¡Misión completada!</h2>
+            <h2 id="arcade-mission-complete-title" class="arcade-flow-modal__title">¡Lo lograste!</h2>
             <p
               class="arcade-mission-complete__equation"
               id="arcade-mission-complete-equation"
@@ -207,7 +207,7 @@
               class="btn-primary arcade-flow-modal__cta"
               id="btn-arcade-mission-complete-next"
             >
-              Ir a la siguiente misión
+              Siguiente misión
             </button>
           </div>
         </div>
@@ -225,7 +225,7 @@
             <p id="arcade-mission-lead" class="arcade-flow-modal__lead"></p>
             <p id="arcade-mission-detail" class="arcade-flow-modal__body"></p>
             <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-mission-ok">
-              ¡Entendido, a jugar!
+              ¡A jugar!
             </button>
           </div>
         </div>
@@ -251,7 +251,7 @@
           <div
             id="sum-workspace"
             class="sum-workspace"
-            aria-label="Mesa de suma. Arrastrá una burbuja sobre otra; luego escribí la suma para fusionar."
+            aria-label="Sumar: arrastrá una burbuja sobre otra y escribí el resultado."
           ></div>
           <p id="sum-merge-hint" class="sum-merge-hint" aria-live="polite"></p>
         </div>
@@ -269,7 +269,7 @@
             aria-labelledby="sum-merge-prompt"
           >
             <p id="sum-merge-prompt" class="sum-merge-prompt"></p>
-            <p class="sum-merge-modal__sub">Escribí el resultado para fusionar (como en Bubble Math Lab).</p>
+            <p class="sum-merge-modal__sub">Escribí cuánto da y tocá Fusionar.</p>
             <form id="form-sum-merge" class="sum-merge-form" novalidate>
               <label class="sum-merge-label" for="sum-merge-answer">¿Cuánto es?</label>
               <input
@@ -330,7 +330,7 @@
           <h2 id="memory-round-title" class="memory-round-modal__title"></h2>
           <p id="memory-round-message" class="memory-round-modal__message"></p>
           <button type="button" class="btn-primary btn-memory-round-next" id="btn-memory-round-next">
-            Siguiente reto
+            Siguiente
           </button>
         </div>
       </div>
@@ -339,7 +339,7 @@
 
     <!-- RESULTADO -->
     <section id="screen-result" class="screen screen--result" hidden aria-label="Resultado">
-      <h2 class="result-title">¡Misión completada!</h2>
+      <h2 class="result-title">¡Terminaste!</h2>
       <div class="result-stars" id="result-stars"></div>
       <div class="result-points" id="result-points"></div>
       <p class="result-msg" id="result-msg"></p>
