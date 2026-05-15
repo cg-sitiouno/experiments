@@ -49,7 +49,7 @@
         <button type="button" class="analyzer-mode-card" id="btn-mode-arcade">
           <span class="analyzer-mode-card__title">Modo arcade</span>
           <span class="analyzer-mode-card__desc">
-            Sin botones de respuesta: resolvé la multiplicación armando grupos en la canasta y sumando burbujas hasta llegar al producto.
+            Sin botones de respuesta: resolvé la multiplicación armando grupos en la zona verde y sumando burbujas hasta llegar al producto.
           </span>
         </button>
       </div>
@@ -123,7 +123,7 @@
             <div
               id="arcade-field"
               class="arcade-field"
-              aria-label="Zona de juego. +1/−1 en la dock. Arrastrá burbujas a la canasta o devolvélas al campo. Ratón: apuntá y clic para disparar."
+              aria-label="Zona de juego. +1/−1 en la dock. Arrastrá burbujas a la zona de grupos o devolvélas al campo. Ratón: apuntá y clic para disparar."
             >
               <svg id="arcade-aim-svg" class="arcade-aim-svg" aria-hidden="true">
                 <line
@@ -137,7 +137,7 @@
               </svg>
               <div id="arcade-muzzle" class="arcade-muzzle" aria-hidden="true"></div>
             </div>
-            <aside class="arcade-side" aria-label="Canasta: soltá burbujas aquí o arrástralas de vuelta al campo">
+            <aside class="arcade-side" aria-label="Zona de grupos: soltá burbujas aquí o arrástralas de vuelta al campo">
               <div id="collection-zone" class="arcade-group-rack"></div>
             </aside>
             <div class="arcade-dock">
@@ -166,9 +166,84 @@
             </div>
           </div>
           <p id="analyzer-collect-hint" class="analyzer__collect-hint analyzer__collect-hint--mini" aria-live="polite"></p>
-          <button type="button" class="btn-analyzer-next" id="btn-analyzer-next" disabled>
-            Siguiente →
-          </button>
+        </div>
+
+        <div id="arcade-group-placed-modal" class="arcade-flow-modal" hidden>
+          <div class="arcade-flow-modal__backdrop" aria-hidden="true"></div>
+          <div
+            class="arcade-flow-modal__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcade-group-placed-title"
+          >
+            <h2 id="arcade-group-placed-title" class="arcade-flow-modal__title">Grupo listo</h2>
+            <p id="arcade-group-placed-body" class="arcade-flow-modal__body"></p>
+            <label class="arcade-flow-modal__check">
+              <input type="checkbox" id="arcade-group-placed-skip" />
+              No volver a mostrar este aviso
+            </label>
+            <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-group-placed-ok">
+              Entendido
+            </button>
+          </div>
+        </div>
+
+        <div id="arcade-mission-complete-modal" class="arcade-flow-modal" hidden>
+          <div class="arcade-flow-modal__backdrop" aria-hidden="true"></div>
+          <div
+            class="arcade-flow-modal__card arcade-flow-modal__card--celebrate"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcade-mission-complete-title"
+          >
+            <h2 id="arcade-mission-complete-title" class="arcade-flow-modal__title">¡Misión completada!</h2>
+            <p
+              class="arcade-mission-complete__equation"
+              id="arcade-mission-complete-equation"
+              aria-live="polite"
+            ></p>
+            <button
+              type="button"
+              class="btn-primary arcade-flow-modal__cta"
+              id="btn-arcade-mission-complete-next"
+            >
+              Ir a la siguiente misión
+            </button>
+          </div>
+        </div>
+
+        <div id="arcade-mission-modal" class="arcade-flow-modal" hidden>
+          <div class="arcade-flow-modal__backdrop" aria-hidden="true"></div>
+          <div
+            class="arcade-flow-modal__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcade-mission-title"
+          >
+            <p class="arcade-flow-modal__kicker" id="arcade-mission-kicker"></p>
+            <h2 id="arcade-mission-title" class="arcade-flow-modal__title">Tu misión</h2>
+            <p id="arcade-mission-lead" class="arcade-flow-modal__lead"></p>
+            <p id="arcade-mission-detail" class="arcade-flow-modal__body"></p>
+            <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-mission-ok">
+              ¡Entendido, a jugar!
+            </button>
+          </div>
+        </div>
+
+        <div id="arcade-phase1-done-modal" class="arcade-flow-modal" hidden>
+          <div class="arcade-flow-modal__backdrop" aria-hidden="true"></div>
+          <div
+            class="arcade-flow-modal__card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="arcade-phase1-done-title"
+          >
+            <h2 id="arcade-phase1-done-title" class="arcade-flow-modal__title">¡Muy bien!</h2>
+            <p id="arcade-phase1-done-body" class="arcade-flow-modal__body"></p>
+            <button type="button" class="btn-primary arcade-flow-modal__cta" id="btn-arcade-phase1-continue">
+              ¡A sumar!
+            </button>
+          </div>
         </div>
 
         <div id="analyzer-sum-wrap" class="analyzer-sum-wrap" hidden>

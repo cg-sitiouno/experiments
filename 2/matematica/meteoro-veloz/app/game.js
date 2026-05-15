@@ -27,6 +27,36 @@ let analyzerCollectHintResetTimer = 0;
 /** Tras completar el producto en modo arcade (fase 2), evita doble avance de ronda. */
 let arcadeRoundWinTimer = 0;
 
+const LS_ARCADE_SKIP_RACK_HINT = "meteoroVeloz_arcade_skipRackHint";
+
+/** Modal "grupos listos" una sola vez por instancia de fase 1. */
+let arcadePhase1GroupsCompleteModalShown = false;
+
+/** @type {null | (() => void)} */
+let arcadeMissionContinue = null;
+
+/** Modal “misión completada” (fase 2) abierto: bloquea acciones en la mesa de suma. */
+let arcadeMissionCompleteModalOpen = false;
+
+/** Valores de burbuja que pasaron a ser “grupo listo” en un solo frame de física (procesar al final del paso). */
+let arcadeGroupBuiltEvents = [];
+
+function isArcadeTargetGroupValue(v) {
+  if (!Number.isFinite(v) || !st.q) return false;
+  const { a, b: bf } = st.q;
+  let targetSize;
+  if (st.analyzerLockedSize != null) {
+    if (v !== st.analyzerLockedSize) return false;
+    targetSize = st.analyzerLockedSize;
+  } else {
+    if (v !== a && v !== bf) return false;
+    targetSize = v;
+  }
+  // Tamaño 1: evitar avisos repetidos (muchos unos en el campo en tablas ×1).
+  if (targetSize < 2) return false;
+  return true;
+}
+
 function initEls() {
   els = {
     screens: {
@@ -58,7 +88,6 @@ function initEls() {
     analyzerSumHint:    document.getElementById("analyzer-sum-hint"),
     sumWorkspace:       document.getElementById("sum-workspace"),
     sumMergeHint:       document.getElementById("sum-merge-hint"),
-    btnAnalyzerNext:    document.getElementById("btn-analyzer-next"),
     btnFlip:            document.getElementById("btn-flip"),
     btnResetAnalyzer:   document.getElementById("btn-reset-analyzer"),
     btnCloseAnalyzer:   document.getElementById("btn-close-analyzer"),
@@ -69,6 +98,22 @@ function initEls() {
     arcadeAimSvg:       document.getElementById("arcade-aim-svg"),
     arcadeAimLine:      document.getElementById("arcade-aim-line"),
     collectionZone:     document.getElementById("collection-zone"),
+    arcadeGroupPlacedModal: document.getElementById("arcade-group-placed-modal"),
+    arcadeGroupPlacedBody: document.getElementById("arcade-group-placed-body"),
+    arcadeGroupPlacedSkip: document.getElementById("arcade-group-placed-skip"),
+    btnArcadeGroupPlacedOk: document.getElementById("btn-arcade-group-placed-ok"),
+    arcadeMissionCompleteModal: document.getElementById("arcade-mission-complete-modal"),
+    arcadeMissionCompleteEquation: document.getElementById("arcade-mission-complete-equation"),
+    btnArcadeMissionCompleteNext: document.getElementById("btn-arcade-mission-complete-next"),
+    arcadeMissionModal: document.getElementById("arcade-mission-modal"),
+    arcadeMissionKicker: document.getElementById("arcade-mission-kicker"),
+    arcadeMissionTitle: document.getElementById("arcade-mission-title"),
+    arcadeMissionLead: document.getElementById("arcade-mission-lead"),
+    arcadeMissionDetail: document.getElementById("arcade-mission-detail"),
+    btnArcadeMissionOk: document.getElementById("btn-arcade-mission-ok"),
+    arcadePhase1DoneModal: document.getElementById("arcade-phase1-done-modal"),
+    arcadePhase1DoneBody: document.getElementById("arcade-phase1-done-body"),
+    btnArcadePhase1Continue: document.getElementById("btn-arcade-phase1-continue"),
     sumMergeModal:       document.getElementById("sum-merge-modal"),
     sumMergePrompt:      document.getElementById("sum-merge-prompt"),
     formSumMerge:        document.getElementById("form-sum-merge"),
@@ -101,6 +146,128 @@ function initEls() {
   };
 }
 
+function closeArcadeMissionModal() {
+  if (els.arcadeMissionModal) els.arcadeMissionModal.hidden = true;
+  arcadeMissionContinue = null;
+}
+
+function closeArcadePhase1DoneModal() {
+  if (els.arcadePhase1DoneModal) els.arcadePhase1DoneModal.hidden = true;
+}
+
+function closeArcadeGroupPlacedModal() {
+  if (els.arcadeGroupPlacedModal) els.arcadeGroupPlacedModal.hidden = true;
+  if (els.arcadeGroupPlacedSkip) els.arcadeGroupPlacedSkip.checked = false;
+}
+
+function closeArcadeMissionCompleteModal() {
+  if (els.arcadeMissionCompleteModal) els.arcadeMissionCompleteModal.hidden = true;
+  arcadeMissionCompleteModalOpen = false;
+}
+
+function closeAllArcadeTeachingUi() {
+  closeArcadeMissionModal();
+  closeArcadePhase1DoneModal();
+  closeArcadeGroupPlacedModal();
+  closeArcadeMissionCompleteModal();
+}
+
+function openArcadeMissionModal(onContinue) {
+  if (!els.arcadeMissionModal || !st.q) return;
+  const { a, b } = st.q;
+  arcadeMissionContinue = onContinue;
+  if (els.arcadeMissionKicker) els.arcadeMissionKicker.textContent = `${a} × ${b}`;
+  if (els.arcadeMissionTitle) els.arcadeMissionTitle.textContent = "Tu misión";
+  if (els.arcadeMissionLead) els.arcadeMissionLead.textContent = `Armá ${a} grupos de ${b}.`;
+  if (els.arcadeMissionDetail) {
+    els.arcadeMissionDetail.textContent =
+      "Usá el cañón: +1 dispara unos en el campo y se suman al chocar; −1 baja una unidad en la burbuja tocada. Formá grupos del tamaño que necesitás y soltálos en la zona verde de la derecha (zona de grupos). Llená la zona con todos los grupos que pide la cuenta.";
+  }
+  els.arcadeMissionModal.hidden = false;
+  window.setTimeout(() => els.btnArcadeMissionOk?.focus(), 40);
+}
+
+function openArcadePhase1CompleteModal() {
+  closeArcadeGroupPlacedModal();
+  stopArcadePhysics();
+  if (!els.arcadePhase1DoneModal) return;
+  if (els.arcadePhase1DoneBody) {
+    els.arcadePhase1DoneBody.textContent =
+      "Felicitaciones: ya construiste los grupos que necesitamos. Ahora vamos a sumarlos.";
+  }
+  els.arcadePhase1DoneModal.hidden = false;
+  window.setTimeout(() => els.btnArcadePhase1Continue?.focus(), 40);
+}
+
+function openArcadeGroupPlacedModal(gv) {
+  stopArcadePhysics();
+  if (!els.arcadeGroupPlacedModal) return;
+  if (els.arcadeGroupPlacedBody) {
+    els.arcadeGroupPlacedBody.textContent =
+      `El sistema detectó que armaste un grupo de ${gv}. Lleválo a la zona verde de la derecha (zona de grupos) para guardarlo. Podés arrastrarlo de vuelta al campo si querés corregir, o seguí armando el resto.`;
+  }
+  if (els.arcadeGroupPlacedSkip) els.arcadeGroupPlacedSkip.checked = false;
+  els.arcadeGroupPlacedModal.hidden = false;
+  window.setTimeout(() => els.btnArcadeGroupPlacedOk?.focus(), 40);
+}
+
+function maybeShowArcadeGroupBuiltHint(gv) {
+  if (st.analyzerHelpMode !== "arcade" || st.analyzerPhase !== 1) return;
+  try {
+    if (localStorage.getItem(LS_ARCADE_SKIP_RACK_HINT) === "1") return;
+  } catch (_) {}
+  if (!els.arcadeGroupPlacedModal) return;
+  if (arcadePhase1GroupsCompleteModalShown) return;
+  if (els.arcadePhase1DoneModal && !els.arcadePhase1DoneModal.hidden) return;
+  if (els.arcadeMissionModal && !els.arcadeMissionModal.hidden) return;
+  if (!els.arcadeGroupPlacedModal.hidden) return;
+  if (!isArcadeTargetGroupValue(gv)) return;
+  openArcadeGroupPlacedModal(gv);
+}
+
+function resumeArcadePhase1PhysicsIfNeeded() {
+  if (
+    st.analyzerHelpMode === "arcade" &&
+    st.analyzerPhase === 1 &&
+    !arcadePhase1GroupsCompleteModalShown &&
+    els.arcadeMissionModal?.hidden &&
+    els.arcadeGroupPlacedModal?.hidden &&
+    els.arcadePhase1DoneModal?.hidden
+  ) {
+    startArcadePhysics();
+  }
+}
+
+function openArcadeMissionCompleteModal() {
+  if (st.answered || arcadeMissionCompleteModalOpen) return;
+  if (!els.arcadeMissionCompleteModal || !st.q) return;
+  clearArcadeRoundWinTimer();
+  stopArcadePhysics();
+  closeSumMergeModal();
+  arcadeMissionCompleteModalOpen = true;
+  const { a, b, product } = st.q;
+  if (els.arcadeMissionCompleteEquation) {
+    els.arcadeMissionCompleteEquation.textContent = `${a} × ${b} = ${product}`;
+  }
+  els.arcadeMissionCompleteModal.hidden = false;
+  window.setTimeout(() => els.btnArcadeMissionCompleteNext?.focus(), 40);
+}
+
+function finalizeArcadeMissionCompleteAdvance() {
+  if (!arcadeMissionCompleteModalOpen) return;
+  if (els.arcadeMissionCompleteModal) els.arcadeMissionCompleteModal.hidden = true;
+  arcadeMissionCompleteModalOpen = false;
+  st.answered = true;
+  st.analyzerOpen = false;
+  st.analyzerHelpMode = null;
+  els.analyzer.hidden = true;
+  st.points += CONFIG.POINTS_BASE;
+  els.hudPoints.textContent = `${st.points} pts`;
+  els.feedbackBar.hidden = true;
+  revealAnswers(-1, true);
+  setTimeout(nextRound, 350);
+}
+
 function showScreen(name) {
   Object.entries(els.screens).forEach(([k, el]) => { el.hidden = k !== name; });
 }
@@ -127,6 +294,7 @@ function goToModeSelectFromGame() {
   els.analyzer.hidden = true;
   closeMemoryTableModal();
   closeMemoryRoundModal();
+  closeAllArcadeTeachingUi();
   st.pendingLevel = st.level;
   updateModeScreenCopy();
   showScreen("mode");
@@ -369,6 +537,7 @@ function openAnalyzer() {
 }
 
 function closeAnalyzer() {
+  closeAllArcadeTeachingUi();
   const wasArcadeOpen = st.gameMode === "arcade" && st.analyzerOpen && !st.answered;
   const wasModalOnlyMemory =
     st.gameMode === "memory" && st.analyzerOpen && els.analyzer.hidden;
@@ -399,7 +568,7 @@ function closeAnalyzer() {
 function flipAnalyzer() {
   if (st.analyzerHelpMode !== "arcade" || st.analyzerPhase !== 1) return;
   st.analyzerFlipped = !st.analyzerFlipped;
-  renderAnalyzerArcadeFull();
+  renderAnalyzerArcadeFull({ skipMissionIntro: true });
 }
 
 function resetAnalyzer() {
@@ -475,7 +644,7 @@ function resetRackLockIfEmpty() {
 function tryCommitBodyToCollection(body) {
   if (body.peelBolt) {
     shakeElement(body.el);
-    showPhase1CollectError("El proyectil no va a la canasta.");
+    showPhase1CollectError("El proyectil no va a la zona de grupos.");
     return false;
   }
   const v = body.value;
@@ -495,7 +664,7 @@ function tryCommitBodyToCollection(body) {
   }
   if (els.collectionZone.children.length >= st.analyzerGroupsTarget) {
     shakeElement(body.el);
-    showPhase1CollectError("Canasta llena.");
+    showPhase1CollectError("La zona de grupos está llena.");
     return false;
   }
   const idx = arcadeBodies.indexOf(body);
@@ -899,10 +1068,10 @@ function setArcadeWeapon(mode) {
   const { first, second } = phase1LabelFactors();
   const hints = {
     shoot:
-      "Dispará +1 hacia el campo. Arrastrá burbujas a la canasta (solo tamaños " +
+      "Dispará +1 hacia el campo. Arrastrá burbujas a la zona de grupos (solo tamaños " +
       `${first} o ${second}; el primero fija el tamaño).`,
     peel:
-      "−1: dispará contra una burbuja > 1 o tocá sin arrastrar para pelar y desprender un 1. Podés devolver fichas de la canasta al campo arrastrando.",
+      "−1: dispará contra una burbuja > 1 o tocá sin arrastrar para pelar y desprender un 1. Podés devolver fichas de la zona de grupos al campo arrastrando.",
   };
   els.analyzerCollectHint.textContent = mode === "peel" ? hints.peel : hints.shoot;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
@@ -945,6 +1114,7 @@ function arcadePeelBubbleHitByBolt(b) {
   window.setTimeout(() => b.el.classList.remove("arcade-bubble--peel-source"), 380);
   syncArcadeBodyDom(b);
   grantArcadeAmmoForPeel();
+  maybeShowArcadeGroupBuiltHint(b.value);
 }
 
 /** @returns {boolean} true si se restó 1 y salió una unidad (solo modo tocar burbuja con −1). */
@@ -971,6 +1141,7 @@ function arcadePeelBubbleInPlace(b) {
   window.setTimeout(() => b.el.classList.remove("arcade-bubble--peel-source"), 380);
   syncArcadeBodyDom(b);
   grantArcadeAmmoForPeel();
+  maybeShowArcadeGroupBuiltHint(b.value);
   return true;
 }
 
@@ -988,9 +1159,17 @@ function mergeBodiesKeepFirst(keep, drop) {
   keep.el.textContent = String(keep.value);
   playArcadeMergeBurst(keep.el);
   syncArcadeBodyDom(keep);
+  if (
+    st.analyzerHelpMode === "arcade" &&
+    st.analyzerPhase === 1 &&
+    isArcadeTargetGroupValue(keep.value)
+  ) {
+    arcadeGroupBuiltEvents.push(keep.value);
+  }
 }
 
 function arcadeStep(dt) {
+  arcadeGroupBuiltEvents.length = 0;
   const fr = els.arcadeField.getBoundingClientRect();
   arcadePhysicsStep(arcadeBodies, {
     fieldW: fr.width,
@@ -1004,6 +1183,9 @@ function arcadeStep(dt) {
     peelBubbleHitByBolt: arcadePeelBubbleHitByBolt,
     mergeBodiesKeepFirst,
   });
+  for (const gv of arcadeGroupBuiltEvents) {
+    maybeShowArcadeGroupBuiltHint(gv);
+  }
 }
 
 function arcadePhysicsTick(now) {
@@ -1181,7 +1363,7 @@ function phase1LabelFactors() {
 
 function defaultAnalyzerPhase1Hint() {
   const { first, second } = phase1LabelFactors();
-  return `Arrastrá a la canasta solo burbujas de ${first} o ${second} (la primera fija el tamaño). +1 / −1 en la dock.`;
+  return `Arrastrá a la zona de grupos solo burbujas de ${first} o ${second} (la primera fija el tamaño). +1 / −1 en la dock.`;
 }
 
 function clearAnalyzerCollectHintResetTimer() {
@@ -1268,12 +1450,15 @@ function showAnalyzerMemoryMode() {
   els.btnFlip.disabled = true;
   els.analyzerFooterLine.textContent =
     "Abrí la tabla si necesitás contexto. Cerrá con ✕ para volver al juego y elegir respuesta.";
-  els.btnAnalyzerNext.disabled = true;
   els.analyzerCollectHint.classList.remove("analyzer__collect-hint--error");
 }
 
-function renderAnalyzerArcadeFull() {
+function renderAnalyzerArcadeFull(/** @type {{ skipMissionIntro?: boolean }} */ opts = {}) {
+  const skipMissionIntro = opts.skipMissionIntro === true;
   const { a, b, product } = st.q;
+
+  arcadePhase1GroupsCompleteModalShown = false;
+  closeAllArcadeTeachingUi();
 
   st.analyzerPhase = 1;
   st.analyzerLockedSize = null;
@@ -1300,7 +1485,6 @@ function renderAnalyzerArcadeFull() {
   els.analyzerCollectHint.textContent = defaultAnalyzerPhase1Hint();
 
   els.btnFlip.disabled = false;
-  els.btnAnalyzerNext.disabled = true;
 
   els.collectionZone.innerHTML = "";
   els.sumWorkspace.innerHTML = "";
@@ -1310,9 +1494,16 @@ function renderAnalyzerArcadeFull() {
   updateArcadeAmmoUi();
   bindArcadeUiOnce();
   setArcadeWeapon("shoot");
-  startArcadePhysics();
 
   updateAnalyzerCollectFooter();
+
+  if (skipMissionIntro) {
+    startArcadePhysics();
+  } else {
+    openArcadeMissionModal(() => {
+      startArcadePhysics();
+    });
+  }
 }
 
 function renderAnalyzer() {
@@ -1337,12 +1528,21 @@ function updateAnalyzerCollectFooter() {
 
   if (lock == null) {
     els.analyzerFooterLine.textContent = n
-      ? `${n} en canasta · solo tamaños ${a} o ${b}`
-      : `Canasta vacía · arrastrá grupos de ${a} o de ${b}`;
-    els.btnAnalyzerNext.disabled = true;
+      ? `${n} en zona de grupos · solo tamaños ${a} o ${b}`
+      : `Zona de grupos vacía · arrastrá grupos de ${a} o de ${b}`;
   } else {
     els.analyzerFooterLine.textContent = `${n} / ${need} grupos de ${lock}`;
-    els.btnAnalyzerNext.disabled = n !== need;
+  }
+
+  if (
+    st.analyzerHelpMode === "arcade" &&
+    st.analyzerPhase === 1 &&
+    lock != null &&
+    n === need &&
+    !arcadePhase1GroupsCompleteModalShown
+  ) {
+    arcadePhase1GroupsCompleteModalShown = true;
+    openArcadePhase1CompleteModal();
   }
 }
 
@@ -1413,29 +1613,15 @@ function clearArcadeRoundWinTimer() {
 }
 
 function scheduleArcadeRoundWin() {
-  if (st.gameMode !== "arcade" || st.answered) return;
+  if (st.gameMode !== "arcade" || st.answered || arcadeMissionCompleteModalOpen) return;
   clearArcadeRoundWinTimer();
   arcadeRoundWinTimer = window.setTimeout(() => {
     arcadeRoundWinTimer = 0;
-    if (st.answered || st.gameMode !== "arcade") return;
-    completeArcadeRoundSuccess();
+    if (st.answered || st.gameMode !== "arcade" || arcadeMissionCompleteModalOpen) return;
+    openArcadeMissionCompleteModal();
   }, 650);
 }
 
-function completeArcadeRoundSuccess() {
-  if (st.answered) return;
-  st.answered = true;
-  stopArcadePhysics();
-  clearArcadeRoundWinTimer();
-  closeSumMergeModal();
-  st.analyzerOpen = false;
-  st.analyzerHelpMode = null;
-  els.analyzer.hidden = true;
-  st.points += CONFIG.POINTS_BASE;
-  showFeedback("✓ ¡Armaste el producto!", true);
-  revealAnswers(-1, true);
-  setTimeout(nextRound, 1400);
-}
 
 function updateSumPhaseFeedback(message, isOk) {
   if (typeof message === "string") {
@@ -1450,7 +1636,7 @@ function updateSumPhaseFeedback(message, isOk) {
     if (v === st.q.product) {
       els.sumMergeHint.textContent =
         st.gameMode === "arcade"
-          ? `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Siguiente ronda…`
+          ? "¡Listo! Mirá el mensaje para seguir."
           : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Volvé al juego y elegí la respuesta.`;
       els.sumMergeHint.className = "sum-merge-hint sum-merge-hint--ok";
       if (st.gameMode === "arcade") scheduleArcadeRoundWin();
@@ -1658,7 +1844,7 @@ function finalizeDecomposeSum(el, v1, v2, ox, oy, x1, y1, x2, y2) {
 }
 
 function tryDecomposeSumBubble(el) {
-  if (st.sumMergeModalOpen || st.analyzerPhase !== 2) return;
+  if (st.sumMergeModalOpen || st.analyzerPhase !== 2 || arcadeMissionCompleteModalOpen) return;
   const n = Number(el.dataset.value);
   const parts = decomposePartsForSumBubble(el);
   if (!parts) {
@@ -1721,7 +1907,7 @@ function bubbleCenterScreen(el) {
 
 function onSumDragStart(e) {
   e.preventDefault();
-  if (st.analyzerPhase !== 2 || st.sumMergeModalOpen) return;
+  if (st.analyzerPhase !== 2 || st.sumMergeModalOpen || arcadeMissionCompleteModalOpen) return;
   const el = e.currentTarget;
   const rect = el.getBoundingClientRect();
   sumDrag.el = el;
@@ -1828,6 +2014,7 @@ function onSumDragEnd(e) {
 }
 
 function applySumMerge(a, b) {
+  if (arcadeMissionCompleteModalOpen) return;
   const va = Number(a.dataset.value);
   const vb = Number(b.dataset.value);
   const sum = va + vb;
@@ -1900,7 +2087,34 @@ document.addEventListener("DOMContentLoaded", () => {
   els.btnFlip.addEventListener("click", flipAnalyzer);
   els.btnResetAnalyzer.addEventListener("click", resetAnalyzer);
   els.btnCloseAnalyzer.addEventListener("click", closeAnalyzer);
-  els.btnAnalyzerNext.addEventListener("click", goAnalyzerSumPhase);
+  if (els.btnArcadeMissionOk) {
+    els.btnArcadeMissionOk.addEventListener("click", () => {
+      const cb = arcadeMissionContinue;
+      arcadeMissionContinue = null;
+      if (els.arcadeMissionModal) els.arcadeMissionModal.hidden = true;
+      if (cb) cb();
+    });
+  }
+  if (els.btnArcadePhase1Continue) {
+    els.btnArcadePhase1Continue.addEventListener("click", () => {
+      closeArcadePhase1DoneModal();
+      goAnalyzerSumPhase();
+    });
+  }
+  if (els.btnArcadeGroupPlacedOk) {
+    els.btnArcadeGroupPlacedOk.addEventListener("click", () => {
+      if (els.arcadeGroupPlacedSkip?.checked) {
+        try {
+          localStorage.setItem(LS_ARCADE_SKIP_RACK_HINT, "1");
+        } catch (_) {}
+      }
+      closeArcadeGroupPlacedModal();
+      resumeArcadePhase1PhysicsIfNeeded();
+    });
+  }
+  if (els.btnArcadeMissionCompleteNext) {
+    els.btnArcadeMissionCompleteNext.addEventListener("click", finalizeArcadeMissionCompleteAdvance);
+  }
   els.formSumMerge.addEventListener("submit", (ev) => {
     ev.preventDefault();
     const pm = st.pendingSumMerge;
