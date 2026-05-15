@@ -975,7 +975,7 @@
       return "En la mesa hay varias decenas: suma primero esas piezas (resplandor dorado).";
     }
     if (hintStats.fiveAndSmall) {
-      return "Tenés un 5 y piezas del 1 al 4: encajan bien entre sí (resplandor celeste).";
+      return "Tienes un 5 y piezas del 1 al 4: encajan bien entre sí (resplandor celeste).";
     }
 
     if (state.bubbles.length === 1) {

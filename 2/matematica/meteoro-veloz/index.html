@@ -14,7 +14,16 @@
     <!-- INICIO -->
     <section id="screen-start" class="screen screen--start" aria-label="Inicio">
       <a href="../index.html" class="link-hub">← Matemática</a>
-      <div class="meteor-hero" aria-hidden="true">🌑</div>
+      <div class="meteor-hero" aria-hidden="true">
+        <img
+          class="meteor-hero__cannon"
+          src="app/assets/cannon.svg"
+          width="120"
+          height="120"
+          alt=""
+          decoding="async"
+        />
+      </div>
       <h1 class="start-title">Meteoro Veloz</h1>
       <p class="start-desc">Elige nivel y modo: memoria o arcade.</p>
       <div class="level-grid" role="group" aria-label="Elige un nivel">
@@ -36,7 +45,16 @@
     <!-- MODO (después del nivel) -->
     <section id="screen-mode" class="screen screen--start" hidden aria-label="Elegir modo de juego">
       <a href="../index.html" class="link-hub">← Matemática</a>
-      <div class="meteor-hero" aria-hidden="true">🌑</div>
+      <div class="meteor-hero" aria-hidden="true">
+        <img
+          class="meteor-hero__cannon"
+          src="app/assets/cannon.svg"
+          width="120"
+          height="120"
+          alt=""
+          decoding="async"
+        />
+      </div>
       <h1 class="start-title">Meteoro Veloz</h1>
       <p class="start-desc" id="mode-screen-lead"></p>
       <div class="analyzer-mode-pick__grid" role="group" aria-label="Modo de juego">
@@ -195,7 +213,7 @@
             aria-modal="true"
             aria-labelledby="arcade-group-placed-title"
           >
-            <h2 id="arcade-group-placed-title" class="arcade-flow-modal__title">¡Tenés un grupo!</h2>
+            <h2 id="arcade-group-placed-title" class="arcade-flow-modal__title">¡Tienes un grupo!</h2>
             <p id="arcade-group-placed-body" class="arcade-flow-modal__body"></p>
             <label class="arcade-flow-modal__check">
               <input type="checkbox" id="arcade-group-placed-skip" />

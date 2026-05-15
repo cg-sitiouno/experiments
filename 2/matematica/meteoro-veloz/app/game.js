@@ -210,7 +210,7 @@ function openArcadeGroupPlacedModal(gv) {
   if (!els.arcadeGroupPlacedModal) return;
   if (els.arcadeGroupPlacedBody) {
     els.arcadeGroupPlacedBody.textContent =
-      `Tenés un grupo de ${gv}. Pasalo al cuadro verde. Si te equivocaste, devolvelo al campo.`;
+      `Tienes un grupo de ${gv}. Pasalo al cuadro verde. Si te equivocaste, devolvelo al campo.`;
   }
   if (els.arcadeGroupPlacedSkip) els.arcadeGroupPlacedSkip.checked = false;
   els.arcadeGroupPlacedModal.hidden = false;
@@ -1773,8 +1773,8 @@ function updateSumPhaseFeedback(message, isOk) {
     } else {
       els.sumMergeHint.textContent =
         v < st.q.product
-          ? `Tenés ${v}. Falta llegar a ${st.q.product}.`
-          : `Tenés ${v}. Hacían falta ${st.q.product}.`;
+          ? `Tienes ${v}. Falta llegar a ${st.q.product}.`
+          : `Tienes ${v}. Hacían falta ${st.q.product}.`;
       els.sumMergeHint.className = "sum-merge-hint";
     }
   } else {
