@@ -22,13 +22,6 @@ export const RESULT_MSGS = [
 /* ── Arcade (paso 1 analizador) ── */
 export const ARCADE_TAP_MAX_MS = 320;
 export const ARCADE_TAP_MAX_MOVE_PX = 28;
-/** Radio mínimo muzzle→puntero para calcular dirección (evita atan2 inestable). */
-export const ARCADE_AIM_DEAD_ZONE_PX = 52;
-/**
- * Radio alrededor del cañón: si el puntero entra aquí, no se cambia la dirección
- * (se conserva la última calculada fuera de este círculo).
- */
-export const ARCADE_AIM_FREEZE_ZONE_PX = 104;
 export const ARCADE_FRICTION = 0.992;
 /** Velocidad inicial al disparar (~px/s en coords de campo). */
 export const ARCADE_SHOT_SPEED = 410;

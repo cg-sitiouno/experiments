@@ -3,8 +3,6 @@ import {
   RESULT_MSGS,
   ARCADE_TAP_MAX_MS,
   ARCADE_TAP_MAX_MOVE_PX,
-  ARCADE_AIM_DEAD_ZONE_PX,
-  ARCADE_AIM_FREEZE_ZONE_PX,
   ARCADE_FRICTION,
   ARCADE_SHOT_SPEED,
   ARCADE_WALL_BOUNCE,
@@ -633,9 +631,6 @@ let arcadeBubbleDrag = null;
 /** @type {{ chip: HTMLElement, pointerId: number, startX: number, startY: number, dragging: boolean, clone: HTMLElement | null } | null} */
 let rackChipDrag = null;
 
-/** Última puntería estable (fuera de la zona de congelación), coords del campo. */
-let arcadeStableAimEnd = /** @type {{ x: number, y: number } | null} */ (null);
-
 function pointInRect(clientX, clientY, rect) {
   return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
 }
@@ -1058,6 +1053,25 @@ function getArcadeMuzzleCenterInField() {
   return { x: w / 2 + field.scrollLeft, y: h - 52 + field.scrollTop };
 }
 
+/**
+ * Pivote del cañón (eje de rotación), en coords del campo.
+ * Debe medirse en #arcade-cannon: ese nodo no rota (solo translateX). Medir el hijo
+ * .arcade-cannon__pivot con getBoundingClientRect() devuelve el AABB rotado y desplaza el pivote.
+ */
+function getArcadeCannonPivotInField() {
+  const field = els.arcadeField;
+  const cannon = els.arcadeCannon;
+  if (field && cannon) {
+    const fr = field.getBoundingClientRect();
+    const cr = cannon.getBoundingClientRect();
+    return {
+      x: cr.left + cr.width / 2 - fr.left + field.scrollLeft,
+      y: cr.bottom - fr.top + field.scrollTop,
+    };
+  }
+  return getArcadeMuzzleCenterInField();
+}
+
 function clientToFieldXY(clientX, clientY) {
   const field = els.arcadeField;
   const fr = field.getBoundingClientRect();
@@ -1067,76 +1081,41 @@ function clientToFieldXY(clientX, clientY) {
   };
 }
 
-/**
- * Si el puntero queda a menos de `minR` del cañón, la dirección se toma con distancia
- * mínima en el mismo rayo (evita atan2 inestable). Sin dirección: apunta arriba en pantalla.
- */
-function arcadeClampedAimPointInField(mx, my, tx, ty, minR = ARCADE_AIM_DEAD_ZONE_PX) {
-  const dx = tx - mx;
-  const dy = ty - my;
-  const len = Math.hypot(dx, dy);
-  if (len === 0) {
-    return { x: mx, y: my - minR };
-  }
-  if (len >= minR) {
-    return { x: tx, y: ty };
-  }
-  const s = minR / len;
-  return { x: mx + dx * s, y: my + dy * s };
-}
-
-/**
- * Fuera de `freezeR`: actualiza la mira estable. Dentro: reutiliza la última mira (no reacciona al ruido cerca del cañón).
- */
-function arcadeResolvedAimInField(mx, my, tx, ty, freezeR = ARCADE_AIM_FREEZE_ZONE_PX) {
-  const dx0 = tx - mx;
-  const dy0 = ty - my;
-  const dist0 = Math.hypot(dx0, dy0);
-  if (dist0 < freezeR) {
-    if (arcadeStableAimEnd) {
-      return arcadeStableAimEnd;
-    }
-    return arcadeClampedAimPointInField(mx, my, mx, my - 1);
-  }
-  const p = arcadeClampedAimPointInField(mx, my, tx, ty);
-  arcadeStableAimEnd = { x: p.x, y: p.y };
-  return arcadeStableAimEnd;
+/** Ángulo del cañón (grados CSS): pendiente de la recta pivote → punto de mira (Y del campo hacia abajo). */
+function cannonAimDegPivotToPoint(px, py, aimX, aimY) {
+  const dx = aimX - px;
+  const dy = aimY - py;
+  return (Math.atan2(dx, -dy) * 180) / Math.PI;
 }
 
 function hideArcadeAimLine() {
   if (els.arcadeAimSvg) els.arcadeAimSvg.classList.remove("arcade-aim-svg--visible");
 }
 
-function muzzleRotationDegrees(mx, my, tx, ty) {
-  const dx = tx - mx;
-  const dy = ty - my;
-  return (Math.atan2(dx, -dy) * 180) / Math.PI;
-}
-
 function setArcadeCannonRotationDeg(deg) {
+  if (!Number.isFinite(deg)) return;
   if (els.arcadeCannon) els.arcadeCannon.style.setProperty("--ac-rot", `${deg}deg`);
 }
 
 function updateArcadeAimVisual(clientX, clientY) {
   if (!els.arcadeField || !els.arcadeAimLine || !els.arcadeCannon || !els.arcadeAimSvg) return;
-  const m = getArcadeMuzzleCenterInField();
+  const pivot = getArcadeCannonPivotInField();
   let p = clientToFieldXY(clientX, clientY);
   const fr = els.arcadeField.getBoundingClientRect();
   p.x = Math.max(0, Math.min(fr.width, p.x));
   p.y = Math.max(0, Math.min(fr.height, p.y));
-  const aim = arcadeResolvedAimInField(m.x, m.y, p.x, p.y);
-  els.arcadeAimLine.setAttribute("x1", String(m.x));
-  els.arcadeAimLine.setAttribute("y1", String(m.y));
-  els.arcadeAimLine.setAttribute("x2", String(aim.x));
-  els.arcadeAimLine.setAttribute("y2", String(aim.y));
+  // Línea y ángulo: recta pivote → cursor (pendiente / atan2), sin punto artificial de “zona muerta”.
+  els.arcadeAimLine.setAttribute("x1", String(pivot.x));
+  els.arcadeAimLine.setAttribute("y1", String(pivot.y));
+  els.arcadeAimLine.setAttribute("x2", String(p.x));
+  els.arcadeAimLine.setAttribute("y2", String(p.y));
   els.arcadeAimSvg.classList.add("arcade-aim-svg--visible");
-  setArcadeCannonRotationDeg(muzzleRotationDegrees(m.x, m.y, aim.x, aim.y));
+  setArcadeCannonRotationDeg(cannonAimDegPivotToPoint(pivot.x, pivot.y, p.x, p.y));
 }
 
 function resetArcadePointerState() {
   arcadeTouchPointer = null;
   arcadeSuppressClickUntil = 0;
-  arcadeStableAimEnd = null;
   hideArcadeAimLine();
   setArcadeCannonRotationDeg(0);
 }
@@ -1165,7 +1144,6 @@ function setArcadeWeapon(mode) {
   st.arcadeWeapon = mode;
   syncArcadeCannonWithWeapon();
   if (mode !== "shoot" && mode !== "peel") {
-    arcadeStableAimEnd = null;
     hideArcadeAimLine();
     setArcadeCannonRotationDeg(0);
   }
@@ -1369,13 +1347,18 @@ function arcadeFireToward(clientX, clientY) {
   const fr = field.getBoundingClientRect();
   const tx = clientX - fr.left + field.scrollLeft;
   const ty = clientY - fr.top + field.scrollTop;
+  const pivot = getArcadeCannonPivotInField();
   const m = getArcadeMuzzleCenterInField();
-  const aim = arcadeResolvedAimInField(m.x, m.y, tx, ty);
-  let dx = aim.x - m.x;
-  let dy = aim.y - m.y;
-  const len = Math.hypot(dx, dy) || 1;
-  dx /= len;
-  dy /= len;
+  let dx = tx - pivot.x;
+  let dy = ty - pivot.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) {
+    dx = 0;
+    dy = -1;
+  } else {
+    dx /= len;
+    dy /= len;
+  }
   const isPeelShot = arcadeWeapon === "peel";
   if (!isPeelShot) {
     if (arcadeAmmoLeft <= 0) {
@@ -1433,7 +1416,6 @@ function onArcadeFieldPointerMove(e) {
   if (!pressMode && e.pointerType === "mouse" && e.buttons === 0) {
       if (targ.closest(".arcade-bubble")) {
         hideArcadeAimLine();
-        arcadeStableAimEnd = null;
         setArcadeCannonRotationDeg(0);
         return;
       }
@@ -1479,7 +1461,6 @@ function onArcadeFieldPointerLeave(e) {
   if (arcadePressToPlay()) return;
   if (e.pointerType !== "mouse") return;
   hideArcadeAimLine();
-  arcadeStableAimEnd = null;
   setArcadeCannonRotationDeg(0);
 }
 
@@ -1785,8 +1766,8 @@ function updateSumPhaseFeedback(message, isOk) {
     if (v === st.q.product) {
       els.sumMergeHint.textContent =
         st.gameMode === "arcade"
-          ? "¡Listo! Mirá el cartel."
-          : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Cerrá y elegí la respuesta.`;
+          ? "¡Listo! ."
+          : `¡Listo! ${v} = ${st.q.a} × ${st.q.b}. Cierra y elige la respuesta.`;
       els.sumMergeHint.className = "sum-merge-hint sum-merge-hint--ok";
       if (st.gameMode === "arcade") scheduleArcadeRoundWin();
     } else {

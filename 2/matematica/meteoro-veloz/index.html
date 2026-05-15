@@ -149,8 +149,19 @@
                 aria-label="Cañón en +1. Toca para cambiar a −1."
                 aria-pressed="false"
               >
-                <span id="arcade-cannon-ball" class="arcade-cannon__ball" aria-hidden="true">+1</span>
-                <span class="arcade-cannon__tri" aria-hidden="true"></span>
+                <span class="arcade-cannon__pivot" aria-hidden="true">
+                  <span id="arcade-cannon-ball" class="arcade-cannon__ball" aria-hidden="true">+1</span>
+                  <span class="arcade-cannon__body" aria-hidden="true">
+                    <img
+                      class="arcade-cannon__svg"
+                      src="app/assets/cannon.svg"
+                      width="120"
+                      height="120"
+                      alt=""
+                      decoding="async"
+                    />
+                  </span>
+                </span>
               </button>
             </div>
             <aside class="arcade-side" aria-label="Cuadro verde: soltá grupos acá o devolvelos al campo">

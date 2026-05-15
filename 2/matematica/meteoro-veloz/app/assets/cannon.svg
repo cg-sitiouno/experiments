@@ -69,14 +69,6 @@
   <g transform="translate(256 275)" filter="url(#shadow)">
     <circle cx="0" cy="-30" r="198" fill="url(#bodyGlow)" opacity=".58"/>
 
-    <path d="M0 -128 C -22 -186 -48 -224 -84 -268" fill="none" stroke="#dbeafe" stroke-width="6" stroke-linecap="round" stroke-dasharray="8 15" opacity=".72"/>
-
-    <g transform="translate(-96 -278)" filter="url(#softGlow)">
-      <circle r="38" fill="url(#bubbleGrad)" stroke="rgba(255,255,255,.65)" stroke-width="4"/>
-      <circle cx="-13" cy="-15" r="10" fill="#fff" opacity=".58"/>
-      <text x="0" y="3" class="num" font-size="34">+1</text>
-    </g>
-
     <path d="M-34 54 L-136 138 L-18 116 Z" fill="url(#finGrad)" stroke="rgba(255,255,255,.35)" stroke-width="4" filter="url(#pinkGlow)"/>
     <path d="M34 54 L136 138 L18 116 Z" fill="url(#finGrad)" stroke="rgba(255,255,255,.35)" stroke-width="4" filter="url(#pinkGlow)"/>
 

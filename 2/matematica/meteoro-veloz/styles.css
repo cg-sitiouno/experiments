@@ -584,18 +584,14 @@ body {
   filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.65)) drop-shadow(0 0 14px rgba(125, 211, 252, 0.35));
 }
 
-/* Cañón: bola en la punta (+1 / −1); toca para alternar */
+/* Cañón: pivote en la base del asset (interior); el botón solo centra en el campo */
 .arcade-cannon {
   --ac-rot: 0deg;
   position: absolute;
   left: 50%;
   bottom: 10px;
-  transform: translateX(-50%) rotate(var(--ac-rot, 0deg));
-  transform-origin: 50% 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
+  transform: translateX(-50%);
+  display: block;
   padding: 0;
   margin: 0;
   border: none;
@@ -604,13 +600,24 @@ body {
   z-index: 4;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+.arcade-cannon__pivot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform: rotate(var(--ac-rot, 0deg));
+  transform-origin: 50% 100%;
   filter: drop-shadow(0 8px 20px rgba(2, 132, 199, 0.55));
   transition: filter 0.15s ease;
 }
-.arcade-cannon:hover {
+.arcade-cannon:hover .arcade-cannon__pivot {
   filter: drop-shadow(0 10px 26px rgba(56, 189, 248, 0.65));
 }
-.arcade-cannon--peel:hover {
+.arcade-cannon--peel .arcade-cannon__pivot {
+  filter: drop-shadow(0 8px 20px rgba(249, 115, 22, 0.45));
+}
+.arcade-cannon--peel:hover .arcade-cannon__pivot {
   filter: drop-shadow(0 10px 26px rgba(249, 115, 22, 0.55));
 }
 .arcade-cannon:focus-visible {
@@ -628,7 +635,7 @@ body {
   font-weight: 900;
   font-size: 0.84rem;
   line-height: 1;
-  margin-bottom: -8px;
+  margin-bottom: -20px;
   z-index: 1;
   border: 2px solid rgba(255, 255, 255, 0.35);
   box-shadow:
@@ -652,15 +659,21 @@ body {
     inset 0 2px 8px rgba(255, 255, 255, 0.28),
     0 0 20px rgba(249, 115, 22, 0.5);
 }
-.arcade-cannon__tri {
-  width: 50px;
-  height: 44px;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  background: linear-gradient(165deg, #e0f2fe 0%, #38bdf8 45%, #0369a1 100%);
-  box-shadow: inset 0 -6px 14px rgba(0, 0, 0, 0.2);
+.arcade-cannon__body {
+  display: block;
+  line-height: 0;
+  margin-top: 2px;
 }
-.arcade-cannon--peel .arcade-cannon__tri {
-  background: linear-gradient(165deg, #ffedd5 0%, #f97316 48%, #9a3412 100%);
+.arcade-cannon__svg {
+  display: block;
+  width: min(120px, 28vw);
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.arcade-cannon--peel .arcade-cannon__svg {
+  filter: saturate(1.15) hue-rotate(-18deg);
 }
 .arcade-side {
   grid-column: 2;
