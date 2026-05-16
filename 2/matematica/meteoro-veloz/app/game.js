@@ -804,7 +804,7 @@ function arcadeBubbleDragMove(e) {
   const d = arcadeBubbleDrag;
   if (!d || e.pointerId !== d.pointerId) return;
   const dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
-  if (!d.dragging && dist >= DRAG_THRESHOLD_PX) {
+  if (!d.dragging && dist > ARCADE_TAP_MAX_MOVE_PX) {
     d.dragging = true;
     arcadeDetachBodyForDrag(d.body);
     const br = d.body.el.getBoundingClientRect();
@@ -882,6 +882,8 @@ function arcadeBubbleDragEnd(e) {
     }
   } else if (arcadeWeapon === "peel") {
     arcadePeelBody(body);
+  } else {
+    arcadeFireToward(e.clientX, e.clientY);
   }
 
   arcadeBubbleDrag = null;
