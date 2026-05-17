@@ -380,6 +380,19 @@
     return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
+  function refreshSoundButtonUi() {
+    const btn = els.btnSound;
+    if (!btn) return;
+    const api = globalThis.BubbleMathLabAudio;
+    const st =
+      api && typeof api.getContextState === "function"
+        ? api.getContextState()
+        : "unsupported";
+    const on = st === "running";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = on ? "Sonido activado" : "Activar sonido";
+  }
+
   /** @type {null | { idA: string, idB: string, v1: number, v2: number, result: number, scoreBasis: number, nx: number, ny: number, op: 'add' | 'subtract', sourceA: string, sourceB: string }} */
   let pendingMerge = null;
 
@@ -387,6 +400,7 @@
     screenStart: document.getElementById("screen-start"),
     screenGame: document.getElementById("screen-game"),
     btnPlay: document.getElementById("btn-play"),
+    btnSound: document.getElementById("btn-sound"),
     btnHome: document.getElementById("btn-home"),
     btnReset: document.getElementById("btn-reset-turn"),
     btnNew: document.getElementById("btn-new-challenge"),
@@ -698,6 +712,13 @@
     });
     renderBubbles();
     spawnMergeFireworks();
+    if (
+      typeof globalThis.BubbleMathLabAudio === "object" &&
+      globalThis.BubbleMathLabAudio &&
+      typeof globalThis.BubbleMathLabAudio.playMerge === "function"
+    ) {
+      globalThis.BubbleMathLabAudio.playMerge();
+    }
     if (autoFusionActive) {
       bumpAutoFusionFuel();
     }
@@ -1519,6 +1540,13 @@
     els.modal.hidden = false;
     els.modal.setAttribute("aria-hidden", "false");
     spawnConfetti();
+    if (
+      typeof globalThis.BubbleMathLabAudio === "object" &&
+      globalThis.BubbleMathLabAudio &&
+      typeof globalThis.BubbleMathLabAudio.playLevelComplete === "function"
+    ) {
+      globalThis.BubbleMathLabAudio.playLevelComplete(prefersReducedMotion());
+    }
   }
 
   function closeSuccessModal() {
@@ -1566,6 +1594,13 @@
     const id2 = nextId();
 
     const el = els.playArea.querySelector('.bubble[data-id="' + b.id + '"]');
+    if (
+      typeof globalThis.BubbleMathLabAudio === "object" &&
+      globalThis.BubbleMathLabAudio &&
+      typeof globalThis.BubbleMathLabAudio.playDecompose === "function"
+    ) {
+      globalThis.BubbleMathLabAudio.playDecompose();
+    }
     if (!el || prefersReducedMotion()) {
       decomposeAnimating = true;
       finalizeDecompose(b, v1, v2, x1, y1, x2, y2, ox, oy, id1, id2);
@@ -1646,6 +1681,14 @@
   }
 
   els.btnPlay.addEventListener("click", () => {
+    const audioApi = globalThis.BubbleMathLabAudio;
+    if (audioApi && typeof audioApi.unlock === "function") {
+      void audioApi.unlock().finally(() => {
+        refreshSoundButtonUi();
+      });
+    } else {
+      refreshSoundButtonUi();
+    }
     const sel = document.querySelector('input[name="play-mode"]:checked');
     state.playMode = sel ? sel.value : "add_only";
     state.tutorialStep = 0;
@@ -1679,6 +1722,38 @@
   els.btnReset.addEventListener("click", resetTurn);
 
   els.btnNew.addEventListener("click", newChallengeFromMenu);
+
+  if (els.btnSound) {
+    els.btnSound.addEventListener("click", () => {
+      const api = globalThis.BubbleMathLabAudio;
+      if (api && typeof api.unlockAndConfirm === "function") {
+        void api.unlockAndConfirm().finally(() => {
+          refreshSoundButtonUi();
+        });
+      } else {
+        refreshSoundButtonUi();
+      }
+    });
+  }
+
+  els.playArea.addEventListener(
+    "pointerdown",
+    () => {
+      const api = globalThis.BubbleMathLabAudio;
+      if (api && typeof api.unlock === "function") {
+        void api.unlock().finally(() => {
+          refreshSoundButtonUi();
+        });
+      }
+    },
+    { capture: true }
+  );
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      refreshSoundButtonUi();
+    }
+  });
 
   els.modalNext.addEventListener("click", () => {
     closeSuccessModal();

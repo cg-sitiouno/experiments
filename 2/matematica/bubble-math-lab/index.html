@@ -62,9 +62,20 @@
         </div>
         <header class="game-header">
           <div class="game-header__cell">
-            <span class="pill pill--score"
-              >Puntos <strong id="hud-score" class="hud-score" aria-live="polite">0</strong></span
-            >
+            <div class="game-header__leader">
+              <span class="pill pill--score"
+                >Puntos <strong id="hud-score" class="hud-score" aria-live="polite">0</strong></span
+              >
+              <button
+                type="button"
+                id="btn-sound"
+                class="btn btn--ghost btn--sound"
+                aria-pressed="false"
+                title="Algunos navegadores bloquean el sonido hasta que interactúas"
+              >
+                Activar sonido
+              </button>
+            </div>
           </div>
           <div class="game-header__cell game-header__cell--center">
             <span class="pill">Reto <strong id="hud-challenge">1</strong></span>
@@ -168,6 +179,7 @@
 
     <div id="confetti-root" class="confetti-root" aria-hidden="true"></div>
 
+    <script src="audioManager.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
